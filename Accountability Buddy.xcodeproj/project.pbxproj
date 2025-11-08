@@ -1,0 +1,563 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		D47BFA912EBFCF0E00ADBEB9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D47BFA7B2EBFCF0C00ADBEB9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D47BFA822EBFCF0C00ADBEB9;
+			remoteInfo = "Accountability Buddy";
+		};
+		D47BFA9B2EBFCF0E00ADBEB9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D47BFA7B2EBFCF0C00ADBEB9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D47BFA822EBFCF0C00ADBEB9;
+			remoteInfo = "Accountability Buddy";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		D47BFA832EBFCF0C00ADBEB9 /* Accountability Buddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Accountability Buddy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D47BFA902EBFCF0E00ADBEB9 /* Accountability BuddyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Accountability BuddyTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D47BFA9A2EBFCF0E00ADBEB9 /* Accountability BuddyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Accountability BuddyUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D47BFA852EBFCF0C00ADBEB9 /* Accountability Buddy */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Accountability Buddy";
+			sourceTree = "<group>";
+		};
+		D47BFA932EBFCF0E00ADBEB9 /* Accountability BuddyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Accountability BuddyTests";
+			sourceTree = "<group>";
+		};
+		D47BFA9D2EBFCF0E00ADBEB9 /* Accountability BuddyUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Accountability BuddyUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D47BFA802EBFCF0C00ADBEB9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D47BFA8D2EBFCF0E00ADBEB9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D47BFA972EBFCF0E00ADBEB9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D47BFA7A2EBFCF0C00ADBEB9 = {
+			isa = PBXGroup;
+			children = (
+				D47BFA852EBFCF0C00ADBEB9 /* Accountability Buddy */,
+				D47BFA932EBFCF0E00ADBEB9 /* Accountability BuddyTests */,
+				D47BFA9D2EBFCF0E00ADBEB9 /* Accountability BuddyUITests */,
+				D47BFA842EBFCF0C00ADBEB9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D47BFA842EBFCF0C00ADBEB9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D47BFA832EBFCF0C00ADBEB9 /* Accountability Buddy.app */,
+				D47BFA902EBFCF0E00ADBEB9 /* Accountability BuddyTests.xctest */,
+				D47BFA9A2EBFCF0E00ADBEB9 /* Accountability BuddyUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D47BFA822EBFCF0C00ADBEB9 /* Accountability Buddy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D47BFAA42EBFCF0E00ADBEB9 /* Build configuration list for PBXNativeTarget "Accountability Buddy" */;
+			buildPhases = (
+				D47BFA7F2EBFCF0C00ADBEB9 /* Sources */,
+				D47BFA802EBFCF0C00ADBEB9 /* Frameworks */,
+				D47BFA812EBFCF0C00ADBEB9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D47BFA852EBFCF0C00ADBEB9 /* Accountability Buddy */,
+			);
+			name = "Accountability Buddy";
+			packageProductDependencies = (
+			);
+			productName = "Accountability Buddy";
+			productReference = D47BFA832EBFCF0C00ADBEB9 /* Accountability Buddy.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D47BFA8F2EBFCF0E00ADBEB9 /* Accountability BuddyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D47BFAA72EBFCF0E00ADBEB9 /* Build configuration list for PBXNativeTarget "Accountability BuddyTests" */;
+			buildPhases = (
+				D47BFA8C2EBFCF0E00ADBEB9 /* Sources */,
+				D47BFA8D2EBFCF0E00ADBEB9 /* Frameworks */,
+				D47BFA8E2EBFCF0E00ADBEB9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D47BFA922EBFCF0E00ADBEB9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D47BFA932EBFCF0E00ADBEB9 /* Accountability BuddyTests */,
+			);
+			name = "Accountability BuddyTests";
+			packageProductDependencies = (
+			);
+			productName = "Accountability BuddyTests";
+			productReference = D47BFA902EBFCF0E00ADBEB9 /* Accountability BuddyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D47BFA992EBFCF0E00ADBEB9 /* Accountability BuddyUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D47BFAAA2EBFCF0E00ADBEB9 /* Build configuration list for PBXNativeTarget "Accountability BuddyUITests" */;
+			buildPhases = (
+				D47BFA962EBFCF0E00ADBEB9 /* Sources */,
+				D47BFA972EBFCF0E00ADBEB9 /* Frameworks */,
+				D47BFA982EBFCF0E00ADBEB9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D47BFA9C2EBFCF0E00ADBEB9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D47BFA9D2EBFCF0E00ADBEB9 /* Accountability BuddyUITests */,
+			);
+			name = "Accountability BuddyUITests";
+			packageProductDependencies = (
+			);
+			productName = "Accountability BuddyUITests";
+			productReference = D47BFA9A2EBFCF0E00ADBEB9 /* Accountability BuddyUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D47BFA7B2EBFCF0C00ADBEB9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					D47BFA822EBFCF0C00ADBEB9 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					D47BFA8F2EBFCF0E00ADBEB9 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = D47BFA822EBFCF0C00ADBEB9;
+					};
+					D47BFA992EBFCF0E00ADBEB9 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = D47BFA822EBFCF0C00ADBEB9;
+					};
+				};
+			};
+			buildConfigurationList = D47BFA7E2EBFCF0C00ADBEB9 /* Build configuration list for PBXProject "Accountability Buddy" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D47BFA7A2EBFCF0C00ADBEB9;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D47BFA842EBFCF0C00ADBEB9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D47BFA822EBFCF0C00ADBEB9 /* Accountability Buddy */,
+				D47BFA8F2EBFCF0E00ADBEB9 /* Accountability BuddyTests */,
+				D47BFA992EBFCF0E00ADBEB9 /* Accountability BuddyUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D47BFA812EBFCF0C00ADBEB9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D47BFA8E2EBFCF0E00ADBEB9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D47BFA982EBFCF0E00ADBEB9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D47BFA7F2EBFCF0C00ADBEB9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D47BFA8C2EBFCF0E00ADBEB9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D47BFA962EBFCF0E00ADBEB9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D47BFA922EBFCF0E00ADBEB9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D47BFA822EBFCF0C00ADBEB9 /* Accountability Buddy */;
+			targetProxy = D47BFA912EBFCF0E00ADBEB9 /* PBXContainerItemProxy */;
+		};
+		D47BFA9C2EBFCF0E00ADBEB9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D47BFA822EBFCF0C00ADBEB9 /* Accountability Buddy */;
+			targetProxy = D47BFA9B2EBFCF0E00ADBEB9 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D47BFAA22EBFCF0E00ADBEB9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D47BFAA32EBFCF0E00ADBEB9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D47BFAA52EBFCF0E00ADBEB9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.Accountability-Buddy";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D47BFAA62EBFCF0E00ADBEB9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.Accountability-Buddy";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D47BFAA82EBFCF0E00ADBEB9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.Accountability-BuddyTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Accountability Buddy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Accountability Buddy";
+			};
+			name = Debug;
+		};
+		D47BFAA92EBFCF0E00ADBEB9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.Accountability-BuddyTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Accountability Buddy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Accountability Buddy";
+			};
+			name = Release;
+		};
+		D47BFAAB2EBFCF0E00ADBEB9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.Accountability-BuddyUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Accountability Buddy";
+			};
+			name = Debug;
+		};
+		D47BFAAC2EBFCF0E00ADBEB9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = DNG3MKZ6T9;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.Accountability-BuddyUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Accountability Buddy";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D47BFA7E2EBFCF0C00ADBEB9 /* Build configuration list for PBXProject "Accountability Buddy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D47BFAA22EBFCF0E00ADBEB9 /* Debug */,
+				D47BFAA32EBFCF0E00ADBEB9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D47BFAA42EBFCF0E00ADBEB9 /* Build configuration list for PBXNativeTarget "Accountability Buddy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D47BFAA52EBFCF0E00ADBEB9 /* Debug */,
+				D47BFAA62EBFCF0E00ADBEB9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D47BFAA72EBFCF0E00ADBEB9 /* Build configuration list for PBXNativeTarget "Accountability BuddyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D47BFAA82EBFCF0E00ADBEB9 /* Debug */,
+				D47BFAA92EBFCF0E00ADBEB9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D47BFAAA2EBFCF0E00ADBEB9 /* Build configuration list for PBXNativeTarget "Accountability BuddyUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D47BFAAB2EBFCF0E00ADBEB9 /* Debug */,
+				D47BFAAC2EBFCF0E00ADBEB9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D47BFA7B2EBFCF0C00ADBEB9 /* Project object */;
+}
