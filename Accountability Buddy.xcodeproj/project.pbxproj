@@ -6,6 +6,20 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D4F50A8F2EC14C2E009DA2C1 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50A8E2EC14C26009DA2C1 /* README.md */; };
+		D4F50A912EC14C4B009DA2C1 /* SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50A902EC14C46009DA2C1 /* SETUP.md */; };
+		D4F50A952EC14C8A009DA2C1 /* SUUPABASE_CREDENTIALS.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50A942EC14C81009DA2C1 /* SUUPABASE_CREDENTIALS.md */; };
+		D4F50A982EC14E76009DA2C1 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50A972EC14E76009DA2C1 /* Auth */; };
+		D4F50A9A2EC14E76009DA2C1 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50A992EC14E76009DA2C1 /* Functions */; };
+		D4F50A9C2EC14E76009DA2C1 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50A9B2EC14E76009DA2C1 /* PostgREST */; };
+		D4F50A9E2EC14E76009DA2C1 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50A9D2EC14E76009DA2C1 /* Realtime */; };
+		D4F50AA02EC14E76009DA2C1 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50A9F2EC14E76009DA2C1 /* Storage */; };
+		D4F50AA22EC14E76009DA2C1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50AA12EC14E76009DA2C1 /* Supabase */; };
+		D4F50AB52EC17A4C009DA2C1 /* FRIENDS_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50AB32EC17A4C009DA2C1 /* FRIENDS_SETUP.md */; };
+		D4F50AB62EC17A4C009DA2C1 /* PROFILE_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50AB42EC17A4C009DA2C1 /* PROFILE_SETUP.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D47BFA912EBFCF0E00ADBEB9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +41,11 @@
 		D47BFA832EBFCF0C00ADBEB9 /* Accountability Buddy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Accountability Buddy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D47BFA902EBFCF0E00ADBEB9 /* Accountability BuddyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Accountability BuddyTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D47BFA9A2EBFCF0E00ADBEB9 /* Accountability BuddyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Accountability BuddyUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4F50A8E2EC14C26009DA2C1 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		D4F50A902EC14C46009DA2C1 /* SETUP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SETUP.md; sourceTree = "<group>"; };
+		D4F50A942EC14C81009DA2C1 /* SUUPABASE_CREDENTIALS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SUUPABASE_CREDENTIALS.md; sourceTree = "<group>"; };
+		D4F50AB32EC17A4C009DA2C1 /* FRIENDS_SETUP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FRIENDS_SETUP.md; sourceTree = "<group>"; };
+		D4F50AB42EC17A4C009DA2C1 /* PROFILE_SETUP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PROFILE_SETUP.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -45,6 +64,26 @@
 			path = "Accountability BuddyUITests";
 			sourceTree = "<group>";
 		};
+		D4F50A752EBFD516009DA2C1 /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D4F50A792EBFD594009DA2C1 /* Services */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D4F50A7D2EBFD5BC009DA2C1 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		D4F50A842EBFD75B009DA2C1 /* Views */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Views;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +91,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4F50A9C2EC14E76009DA2C1 /* PostgREST in Frameworks */,
+				D4F50A9A2EC14E76009DA2C1 /* Functions in Frameworks */,
+				D4F50AA22EC14E76009DA2C1 /* Supabase in Frameworks */,
+				D4F50A982EC14E76009DA2C1 /* Auth in Frameworks */,
+				D4F50AA02EC14E76009DA2C1 /* Storage in Frameworks */,
+				D4F50A9E2EC14E76009DA2C1 /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +120,15 @@
 		D47BFA7A2EBFCF0C00ADBEB9 = {
 			isa = PBXGroup;
 			children = (
+				D4F50AB32EC17A4C009DA2C1 /* FRIENDS_SETUP.md */,
+				D4F50AB42EC17A4C009DA2C1 /* PROFILE_SETUP.md */,
+				D4F50A902EC14C46009DA2C1 /* SETUP.md */,
+				D4F50A942EC14C81009DA2C1 /* SUUPABASE_CREDENTIALS.md */,
+				D4F50A8E2EC14C26009DA2C1 /* README.md */,
+				D4F50A842EBFD75B009DA2C1 /* Views */,
+				D4F50A7D2EBFD5BC009DA2C1 /* ViewModels */,
+				D4F50A792EBFD594009DA2C1 /* Services */,
+				D4F50A752EBFD516009DA2C1 /* Models */,
 				D47BFA852EBFCF0C00ADBEB9 /* Accountability Buddy */,
 				D47BFA932EBFCF0E00ADBEB9 /* Accountability BuddyTests */,
 				D47BFA9D2EBFCF0E00ADBEB9 /* Accountability BuddyUITests */,
@@ -109,9 +163,19 @@
 			);
 			fileSystemSynchronizedGroups = (
 				D47BFA852EBFCF0C00ADBEB9 /* Accountability Buddy */,
+				D4F50A752EBFD516009DA2C1 /* Models */,
+				D4F50A792EBFD594009DA2C1 /* Services */,
+				D4F50A7D2EBFD5BC009DA2C1 /* ViewModels */,
+				D4F50A842EBFD75B009DA2C1 /* Views */,
 			);
 			name = "Accountability Buddy";
 			packageProductDependencies = (
+				D4F50A972EC14E76009DA2C1 /* Auth */,
+				D4F50A992EC14E76009DA2C1 /* Functions */,
+				D4F50A9B2EC14E76009DA2C1 /* PostgREST */,
+				D4F50A9D2EC14E76009DA2C1 /* Realtime */,
+				D4F50A9F2EC14E76009DA2C1 /* Storage */,
+				D4F50AA12EC14E76009DA2C1 /* Supabase */,
 			);
 			productName = "Accountability Buddy";
 			productReference = D47BFA832EBFCF0C00ADBEB9 /* Accountability Buddy.app */;
@@ -195,6 +259,9 @@
 			);
 			mainGroup = D47BFA7A2EBFCF0C00ADBEB9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D47BFA842EBFCF0C00ADBEB9 /* Products */;
 			projectDirPath = "";
@@ -212,6 +279,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D4F50A912EC14C4B009DA2C1 /* SETUP.md in Resources */,
+				D4F50A952EC14C8A009DA2C1 /* SUUPABASE_CREDENTIALS.md in Resources */,
+				D4F50A8F2EC14C2E009DA2C1 /* README.md in Resources */,
+				D4F50AB52EC17A4C009DA2C1 /* FRIENDS_SETUP.md in Resources */,
+				D4F50AB62EC17A4C009DA2C1 /* PROFILE_SETUP.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -558,6 +630,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D4F50A972EC14E76009DA2C1 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		D4F50A992EC14E76009DA2C1 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		D4F50A9B2EC14E76009DA2C1 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		D4F50A9D2EC14E76009DA2C1 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		D4F50A9F2EC14E76009DA2C1 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		D4F50AA12EC14E76009DA2C1 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4F50A962EC14E76009DA2C1 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D47BFA7B2EBFCF0C00ADBEB9 /* Project object */;
 }

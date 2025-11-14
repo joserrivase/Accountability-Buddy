@@ -5,13 +5,17 @@
 //  Created by Jose Rivas on 11/8/25.
 //
 
+
 import SwiftUI
 
 @main
-struct Accountability_BuddyApp: App {
+struct AccountabilityBuddyApp: App {
+    @StateObject private var authViewModel = AuthViewModel()
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authViewModel)
         }
     }
 }

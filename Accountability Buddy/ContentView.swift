@@ -8,17 +8,37 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if authViewModel.isAuthenticated {
+                TabView {
+                    GoalsView()
+                        .tabItem {
+                            Label("Goals", systemImage: "target")
+                        }
+                        .environmentObject(authViewModel)
+                    
+                    FriendsView()
+                        .tabItem {
+                            Label("Friends", systemImage: "person.2.fill")
+                        }
+                        .environmentObject(authViewModel)
+                    
+                    ProfileView()
+                        .tabItem {
+                            Label("Profile", systemImage: "person.fill")
+                        }
+                        .environmentObject(authViewModel)
+                }
+            } else {
+                AuthView()
+                    .environmentObject(authViewModel)
+            }
         }
-        .padding()
+        .onAppear {
+            authViewModel.checkAuthStatus()
+        }
     }
-}
-
-#Preview {
-    ContentView()
 }
