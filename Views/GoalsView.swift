@@ -12,7 +12,6 @@ struct GoalsView: View {
     @StateObject private var viewModel = GoalsViewModel()
     @StateObject private var friendsViewModel = FriendsViewModel()
     @State private var showingAddGoal = false
-    @State private var selectedGoal: GoalWithProgress?
     
     var body: some View {
         NavigationView {
@@ -41,8 +40,8 @@ struct GoalsView: View {
                 } else {
                     List {
                         ForEach(viewModel.goals) { goalWithProgress in
-                            GoalRowView(goalWithProgress: goalWithProgress) {
-                                selectedGoal = goalWithProgress
+                            NavigationLink(destination: GoalDetailView(viewModel: viewModel, goalWithProgress: goalWithProgress).environmentObject(authViewModel)) {
+                                GoalRowView(goalWithProgress: goalWithProgress)
                             }
                         }
                         .onDelete(perform: { indexSet in
@@ -67,10 +66,10 @@ struct GoalsView: View {
                 }
             }
             .sheet(isPresented: $showingAddGoal) {
-                AddGoalView(viewModel: viewModel, friendsViewModel: friendsViewModel)
-            }
-            .sheet(item: $selectedGoal) { goalWithProgress in
-                GoalDetailView(viewModel: viewModel, goalWithProgress: goalWithProgress)
+                GoalQuestionnaireView(
+                    goalsViewModel: viewModel,
+                    friendsViewModel: friendsViewModel
+                )
             }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") {
@@ -97,44 +96,40 @@ struct GoalsView: View {
 // Goal Row View
 struct GoalRowView: View {
     let goalWithProgress: GoalWithProgress
-    let onTap: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                Image(systemName: "target")
-                    .foregroundColor(.blue)
-                    .frame(width: 24)
+        HStack(spacing: 12) {
+            Image(systemName: "target")
+                .foregroundColor(.blue)
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(goalWithProgress.goal.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(goalWithProgress.goal.name)
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                HStack(spacing: 8) {
+                    Text(goalWithProgress.goal.trackingMethod.displayName)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     
-                    HStack(spacing: 8) {
-                        Text(goalWithProgress.goal.trackingMethod.displayName)
+                    if goalWithProgress.goal.buddyId != nil {
+                        Text("•")
+                            .foregroundColor(.secondary)
+                        Text("With Buddy")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        
-                        if goalWithProgress.goal.buddyId != nil {
-                            Text("•")
-                                .foregroundColor(.secondary)
-                            Text("With Buddy")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
                     }
                 }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
             }
-            .padding(.vertical, 4)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.secondary)
+                .font(.caption)
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(.vertical, 4)
     }
 }
 

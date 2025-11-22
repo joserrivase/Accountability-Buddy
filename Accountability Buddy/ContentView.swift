@@ -26,6 +26,12 @@ struct ContentView: View {
                         }
                         .environmentObject(authViewModel)
                     
+                    NotificationsView()
+                        .tabItem {
+                            Label("Notifications", systemImage: "bell")
+                        }
+                        .environmentObject(authViewModel)
+                    
                     ProfileView()
                         .tabItem {
                             Label("Profile", systemImage: "person.fill")

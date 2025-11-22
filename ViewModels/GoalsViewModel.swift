@@ -15,7 +15,7 @@ class GoalsViewModel: ObservableObject {
     @Published var errorMessage: String?
     
     private let supabaseService = SupabaseService.shared
-    private var userId: UUID?
+    var userId: UUID? // Made public for questionnaire access
     
     func setUserId(_ userId: UUID) {
         self.userId = userId
@@ -92,7 +92,7 @@ class GoalsViewModel: ObservableObject {
         }
     }
     
-    func updateGoalProgress(goalId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [String]? = nil) async {
+    func updateGoalProgress(goalId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [GoalListItem]? = nil) async {
         guard let userId = userId else {
             errorMessage = "User ID not available"
             return

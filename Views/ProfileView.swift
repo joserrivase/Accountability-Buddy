@@ -10,7 +10,10 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var viewModel = ProfileViewModel()
+    @StateObject private var goalsViewModel = GoalsViewModel()
+    @StateObject private var friendsViewModel = FriendsViewModel()
     @State private var showingEditProfile = false
+    @State private var showingSettings = false
     
     var body: some View {
         NavigationView {
@@ -20,14 +23,14 @@ struct ProfileView: View {
                     ProgressView()
                     Spacer()
                 } else {
-                    // Profile Image
+                    // Profile Image - Smaller
                     if let imageUrlString = viewModel.profile?.profileImageUrl,
                        let imageUrl = URL(string: imageUrlString) {
                         AsyncImage(url: imageUrl) { phase in
                             switch phase {
                             case .empty:
                                 ProgressView()
-                                    .frame(width: 120, height: 120)
+                                    .frame(width: 80, height: 80)
                             case .success(let image):
                                 image
                                     .resizable()
@@ -40,86 +43,84 @@ struct ProfileView: View {
                                 EmptyView()
                             }
                         }
-                        .frame(width: 120, height: 120)
+                        .frame(width: 80, height: 80)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.blue, lineWidth: 3))
+                        .overlay(Circle().stroke(Color.blue, lineWidth: 2))
                     } else {
                         Image(systemName: "person.circle.fill")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 120, height: 120)
+                            .frame(width: 80, height: 80)
                             .foregroundColor(.gray)
-                            .overlay(Circle().stroke(Color.blue, lineWidth: 3))
+                            .overlay(Circle().stroke(Color.blue, lineWidth: 2))
                     }
                     
                     // User Info
                     VStack(spacing: 8) {
                         if let name = viewModel.profile?.name, !name.isEmpty {
                             Text(name)
-                                .font(.title)
+                                .font(.title2)
                                 .fontWeight(.bold)
                         } else {
                             Text("No name set")
-                                .font(.title)
+                                .font(.title2)
                                 .fontWeight(.bold)
                                 .foregroundColor(.secondary)
                         }
                         
                         if let username = viewModel.profile?.username, !username.isEmpty {
                             Text("@\(username)")
-                                .font(.headline)
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         } else {
                             Text("No username set")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        if let email = getCurrentUserEmail() {
-                            Text(email)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
                     }
                     .padding(.top)
                     
-                    Spacer()
-                    
-                    // Edit Profile Button
-                    Button(action: {
-                        showingEditProfile = true
-                    }) {
-                        Text("Update Profile")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .padding(.horizontal)
-                    
-                    // Sign Out Button
-                    Button(action: {
-                        Task {
-                            await authViewModel.signOut()
+                    // Stats Row
+                    HStack(spacing: 40) {
+                        VStack(spacing: 4) {
+                            Text("\(goalsViewModel.goals.count)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Text("Goals")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
-                    }) {
-                        Text("Sign Out")
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                        
+                        VStack(spacing: 4) {
+                            Text("\(friendsViewModel.friends.count)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Text("Friends")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom)
+                    .padding(.top, 20)
+                    
+                    Spacer()
                 }
             }
-            .navigationTitle("Profile")
+            .navigationTitle("")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingSettings = true
+                    }) {
+                        Image(systemName: "gearshape.fill")
+                    }
+                }
+            }
             .sheet(isPresented: $showingEditProfile) {
                 EditProfileView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView(authViewModel: authViewModel)
+                    .environmentObject(authViewModel)
             }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") {
@@ -133,6 +134,8 @@ struct ProfileView: View {
             .onAppear {
                 if let userId = authViewModel.currentUserId {
                     viewModel.setUserId(userId)
+                    goalsViewModel.setUserId(userId)
+                    friendsViewModel.setUserId(userId)
                 }
             }
         }

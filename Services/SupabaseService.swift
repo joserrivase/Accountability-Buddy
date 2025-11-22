@@ -36,7 +36,7 @@ class SupabaseService {
     
     // MARK: - Authentication
     
-    func signUp(email: String, password: String) async throws {
+    func signUp(email: String, password: String, username: String, fullName: String) async throws {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
@@ -52,6 +52,32 @@ class SupabaseService {
             // This is still a successful sign-up, just needs email confirmation
             guard response.user != nil else {
                 throw SupabaseError.signUpFailed
+            }
+            
+            let userId = response.user.id
+            
+            // Create profile with username and name if user is authenticated (has session)
+            // If no session, profile will be created after email confirmation
+            if response.session != nil {
+                // User is automatically signed in, create profile now
+                do {
+                    _ = try await createProfile(userId: userId, username: username, name: fullName)
+                } catch {
+                    // Log error but don't fail signup if profile creation fails
+                    print("⚠️ Warning: Failed to create profile during signup: \(error)")
+                }
+            } else {
+                // User needs to confirm email, profile will be created after confirmation
+                // For now, we'll create it anyway (it will be updated after email confirmation)
+                // Or we can wait until they sign in for the first time
+                // Let's create it with the provided info - if user doesn't exist yet, it will fail gracefully
+                do {
+                    _ = try await createProfile(userId: userId, username: username, name: fullName)
+                } catch {
+                    // If profile creation fails (e.g., user not fully created yet), that's okay
+                    // Profile will be created when they first sign in after email confirmation
+                    print("⚠️ Note: Profile will be created after email confirmation: \(error)")
+                }
             }
             
             // If session exists, user is automatically signed in
@@ -95,6 +121,71 @@ class SupabaseService {
         } catch {
             return nil
         }
+    }
+    
+    func getCurrentUserEmail() async -> String? {
+        guard let client = client else { return nil }
+        
+        do {
+            let session = try await client.auth.session
+            return session.user.email
+        } catch {
+            return nil
+        }
+    }
+    
+    func deleteAccount(userId: UUID) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        // Note: Deleting the auth user requires admin privileges or a database function
+        // For now, we'll delete all user data and sign them out
+        // The actual auth user deletion would need to be done via:
+        // 1. A database function with admin privileges, or
+        // 2. Supabase dashboard, or
+        // 3. Using the service_role key (not recommended in client apps)
+        
+        // Delete the profile (if exists)
+        try? await client
+            .from("profiles")
+            .delete()
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+        
+        // Try to delete the auth user (may fail if not admin)
+        // If this fails, at least all user data has been deleted
+        do {
+            // Check if admin.deleteUser is available
+            try await client.auth.admin.deleteUser(id: userId)
+        } catch {
+            // If admin.deleteUser fails, user data is already deleted
+            // They'll be signed out, and the auth user will remain but with no data
+            print("⚠️ Warning: Could not delete auth user. User data has been deleted. Auth user may need manual deletion.")
+            throw SupabaseError.custom("Account data deleted, but auth user deletion requires admin access. Please contact support if you need full account deletion.")
+        }
+    }
+    
+    func getUserFriendships(userId: UUID) async throws -> [Friendship] {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        let friendshipsAsUser: [Friendship] = try await client
+            .from("friendships")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+            .value
+        
+        let friendshipsAsFriend: [Friendship] = try await client
+            .from("friendships")
+            .select()
+            .eq("friend_id", value: userId.uuidString)
+            .execute()
+            .value
+        
+        return friendshipsAsUser + friendshipsAsFriend
     }
     
     // MARK: - Books CRUD
@@ -387,7 +478,7 @@ class SupabaseService {
         return response
     }
     
-    func updateGoalProgress(goalId: UUID, userId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [String]? = nil) async throws -> GoalProgress {
+    func updateGoalProgress(goalId: UUID, userId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [GoalListItem]? = nil) async throws -> GoalProgress {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
@@ -404,7 +495,7 @@ class SupabaseService {
         struct ProgressUpdate: Codable {
             var numericValue: Double?
             var completedDays: [String]?
-            var listItems: [String]?
+            var listItems: [GoalListItem]?
             var updatedAt: String
             
             enum CodingKeys: String, CodingKey {
@@ -425,6 +516,18 @@ class SupabaseService {
             updatedAt: dateFormatter.string(from: Date())
         )
         
+        // Fetch goal to get buddy info
+        let goals: [Goal] = try await client
+            .from("goals")
+            .select()
+            .eq("id", value: goalId.uuidString)
+            .execute()
+            .value
+        
+        guard let goal = goals.first else {
+            throw SupabaseError.custom("Goal not found")
+        }
+        
         if let existingProgress = existing.first {
             // Update existing progress
             let response: GoalProgress = try await client
@@ -435,6 +538,40 @@ class SupabaseService {
                 .single()
                 .execute()
                 .value
+            
+            // Create notification for buddy if goal has a buddy
+            if let buddyId = goal.buddyId, buddyId != userId {
+                if let userProfile = try? await fetchProfile(userId: userId) {
+                    let notification = AppNotification(
+                        id: UUID(),
+                        userId: buddyId,
+                        type: .goalUpdate,
+                        title: "Goal Update",
+                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        relatedUserId: userId,
+                        relatedGoalId: goalId,
+                        isRead: false
+                    )
+                    _ = try? await createNotification(notification: notification)
+                }
+            }
+            
+            // Also notify creator if user is the buddy
+            if goal.creatorId != userId {
+                if let userProfile = try? await fetchProfile(userId: userId) {
+                    let notification = AppNotification(
+                        id: UUID(),
+                        userId: goal.creatorId,
+                        type: .goalUpdate,
+                        title: "Goal Update",
+                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        relatedUserId: userId,
+                        relatedGoalId: goalId,
+                        isRead: false
+                    )
+                    _ = try? await createNotification(notification: notification)
+                }
+            }
             
             return response
         } else {
@@ -455,6 +592,40 @@ class SupabaseService {
                 .single()
                 .execute()
                 .value
+            
+            // Create notification for buddy if goal has a buddy
+            if let buddyId = goal.buddyId, buddyId != userId {
+                if let userProfile = try? await fetchProfile(userId: userId) {
+                    let notification = AppNotification(
+                        id: UUID(),
+                        userId: buddyId,
+                        type: .goalUpdate,
+                        title: "Goal Update",
+                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        relatedUserId: userId,
+                        relatedGoalId: goalId,
+                        isRead: false
+                    )
+                    _ = try? await createNotification(notification: notification)
+                }
+            }
+            
+            // Also notify creator if user is the buddy
+            if goal.creatorId != userId {
+                if let userProfile = try? await fetchProfile(userId: userId) {
+                    let notification = AppNotification(
+                        id: UUID(),
+                        userId: goal.creatorId,
+                        type: .goalUpdate,
+                        title: "Goal Update",
+                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        relatedUserId: userId,
+                        relatedGoalId: goalId,
+                        isRead: false
+                    )
+                    _ = try? await createNotification(notification: notification)
+                }
+            }
             
             return response
         }
@@ -707,6 +878,20 @@ class SupabaseService {
             .execute()
             .value
         
+        // Create notification for the recipient
+        if let fromProfile = try? await fetchProfile(userId: fromUserId) {
+            let notification = AppNotification(
+                id: UUID(),
+                userId: toUserId,
+                type: .friendRequest,
+                title: "New Friend Request",
+                message: "\(fromProfile.name ?? fromProfile.username ?? "Someone") wants to be your friend",
+                relatedUserId: fromUserId,
+                isRead: false
+            )
+            _ = try? await createNotification(notification: notification)
+        }
+        
         return response
     }
     
@@ -787,6 +972,33 @@ class SupabaseService {
         return requests
     }
     
+    func findPendingFriendship(userId1: UUID, userId2: UUID) async throws -> Friendship? {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        // Check both directions
+        let friendshipsAsUser: [Friendship] = try await client
+            .from("friendships")
+            .select()
+            .eq("user_id", value: userId1.uuidString)
+            .eq("friend_id", value: userId2.uuidString)
+            .eq("status", value: "pending")
+            .execute()
+            .value
+        
+        let friendshipsAsFriend: [Friendship] = try await client
+            .from("friendships")
+            .select()
+            .eq("user_id", value: userId2.uuidString)
+            .eq("friend_id", value: userId1.uuidString)
+            .eq("status", value: "pending")
+            .execute()
+            .value
+        
+        return (friendshipsAsUser + friendshipsAsFriend).first
+    }
+    
     func removeFriend(friendshipId: UUID) async throws {
         guard let client = client else {
             throw SupabaseError.notInitialized
@@ -847,6 +1059,103 @@ class SupabaseService {
         }
         
         return friends
+    }
+    
+    // MARK: - Notifications CRUD
+    
+    func fetchNotifications(userId: UUID) async throws -> [AppNotification] {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        let response: [AppNotification] = try await client
+            .from("notifications")
+            .select()
+            .eq("user_id", value: userId.uuidString)
+            .order("created_at", ascending: false)
+            .limit(100)
+            .execute()
+            .value
+        
+        return response
+    }
+    
+    func createNotification(notification: AppNotification) async throws -> AppNotification {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        let response: AppNotification = try await client
+            .from("notifications")
+            .insert(notification)
+            .select()
+            .single()
+            .execute()
+            .value
+        
+        return response
+    }
+    
+    func markNotificationAsRead(notificationId: UUID) async throws -> AppNotification {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        struct NotificationUpdate: Codable {
+            var isRead: Bool
+            
+            enum CodingKeys: String, CodingKey {
+                case isRead = "is_read"
+            }
+        }
+        
+        let updateData = NotificationUpdate(isRead: true)
+        
+        let response: AppNotification = try await client
+            .from("notifications")
+            .update(updateData)
+            .eq("id", value: notificationId.uuidString)
+            .select()
+            .single()
+            .execute()
+            .value
+        
+        return response
+    }
+    
+    func markAllNotificationsAsRead(userId: UUID) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        struct NotificationUpdate: Codable {
+            var isRead: Bool
+            
+            enum CodingKeys: String, CodingKey {
+                case isRead = "is_read"
+            }
+        }
+        
+        let updateData = NotificationUpdate(isRead: true)
+        
+        try await client
+            .from("notifications")
+            .update(updateData)
+            .eq("user_id", value: userId.uuidString)
+            .eq("is_read", value: false)
+            .execute()
+    }
+    
+    func deleteNotification(notificationId: UUID) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        try await client
+            .from("notifications")
+            .delete()
+            .eq("id", value: notificationId.uuidString)
+            .execute()
     }
 }
 

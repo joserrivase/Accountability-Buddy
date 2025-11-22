@@ -129,11 +129,17 @@ class FriendsViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            _ = try await supabaseService.acceptFriendRequest(friendshipId: friendshipId)
+            print("🔍 DEBUG: Accepting friend request with ID: \(friendshipId)")
+            let updatedFriendship = try await supabaseService.acceptFriendRequest(friendshipId: friendshipId)
+            print("✅ DEBUG: Friend request accepted. Status: \(updatedFriendship.status)")
+            
             // Reload friends and requests
             await loadFriends()
             await loadFriendRequests()
+            
+            print("✅ DEBUG: Friends and requests reloaded. Current friends count: \(friends.count)")
         } catch {
+            print("❌ ERROR: Failed to accept friend request: \(error)")
             errorMessage = error.localizedDescription
         }
     }

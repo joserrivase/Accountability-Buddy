@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct GoalDetailView: View {
-    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authViewModel: AuthViewModel
     @ObservedObject var viewModel: GoalsViewModel
     @State var goalWithProgress: GoalWithProgress
@@ -42,90 +41,142 @@ struct GoalDetailView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Goal Info
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(goalWithProgress.goal.name)
-                            .font(.title)
-                            .fontWeight(.bold)
-                        
-                        Text(goalWithProgress.goal.trackingMethod.displayName)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        if let buddyId = goalWithProgress.goal.buddyId {
-                            Text("With Accountability Buddy")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    
-                    // My Progress Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("My Progress")
-                            .font(.headline)
-                        
-                        progressView(for: myProgressData, isMine: true)
-                        
-                        progressInputView(isMine: true)
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    
-                    // Buddy Progress Section
-                    if goalWithProgress.goal.buddyId != nil {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Buddy's Progress")
-                                .font(.headline)
-                            
-                            progressView(for: buddyProgressData, isMine: false)
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                }
-                .padding()
-            }
-            .navigationTitle("Goal Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-            .onAppear {
-                myProgress = myProgressData
-                buddyProgress = buddyProgressData
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                goalHeader
                 
-                // Initialize input values
-                if let progress = myProgressData {
-                    switch goalWithProgress.goal.trackingMethod {
-                    case .inputNumbers:
-                        numericInput = progress.numericValue != nil ? String(Int(progress.numericValue!)) : ""
-                    default:
-                        break
-                    }
+                if goalWithProgress.goal.trackingMethod == .inputList {
+                    inputListDetailContent
+                } else {
+                    defaultDetailContent
                 }
             }
-            .onChange(of: viewModel.goals) { updatedGoals in
-                // Reload progress when goals update
-                if let updatedGoal = updatedGoals.first(where: { $0.goal.id == goalWithProgress.goal.id }) {
-                    goalWithProgress = updatedGoal
+            .padding()
+        }
+        .navigationTitle("Goal Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            myProgress = myProgressData
+            buddyProgress = buddyProgressData
+            
+            if let progress = myProgressData, goalWithProgress.goal.trackingMethod == .inputNumbers {
+                numericInput = progress.numericValue != nil ? String(Int(progress.numericValue!)) : ""
+            }
+        }
+        .onChange(of: viewModel.goals) { updatedGoals in
+            if let updatedGoal = updatedGoals.first(where: { $0.goal.id == goalWithProgress.goal.id }) {
+                // Only update if the goal actually changed (don't overwrite optimistic updates)
+                goalWithProgress = updatedGoal
+                // Update local progress states
+                if myProgress == nil || myProgress?.listItems?.count != updatedGoal.creatorProgress?.listItems?.count {
                     myProgress = myProgressData
+                }
+                if buddyProgress == nil || buddyProgress?.listItems?.count != updatedGoal.buddyProgress?.listItems?.count {
                     buddyProgress = buddyProgressData
                 }
             }
         }
+    }
+    
+    private var goalHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(goalWithProgress.goal.name)
+                .font(.title)
+                .fontWeight(.bold)
+            
+            Text(goalWithProgress.goal.trackingMethod.displayName)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            if goalWithProgress.goal.buddyId != nil {
+                Text("With Accountability Buddy")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private var defaultDetailContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("My Progress")
+                    .font(.headline)
+                
+                progressView(for: myProgressData, isMine: true)
+                progressInputView(isMine: true)
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
+            
+            if goalWithProgress.goal.buddyId != nil {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Buddy's Progress")
+                        .font(.headline)
+                    
+                    progressView(for: buddyProgressData, isMine: false)
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+            }
+        }
+    }
+    
+    private var inputListDetailContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            listComparisonView
+            progressInputView(isMine: true)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private var listComparisonView: some View {
+        HStack(alignment: .top, spacing: 16) {
+            // Use myProgress state for immediate updates, fallback to goalWithProgress
+            let myItems = myProgress?.listItems ?? myProgressData?.listItems ?? []
+            userListColumn(title: "Me", items: myItems)
+            
+            if goalWithProgress.goal.buddyId != nil {
+                // Use buddyProgress state for immediate updates, fallback to goalWithProgress
+                let buddyItems = buddyProgress?.listItems ?? buddyProgressData?.listItems ?? []
+                userListColumn(title: "Buddy", items: buddyItems)
+            }
+        }
+    }
+    
+    private func userListColumn(title: String, items: [GoalListItem]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+            if items.isEmpty {
+                Text("No entries yet")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            } else {
+                ForEach(items.sorted(by: { $0.date > $1.date }).prefix(10)) { item in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.title)
+                            .font(.subheadline)
+                        Text(formatDate(item.date))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(8)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     @ViewBuilder
@@ -161,17 +212,8 @@ struct GoalDetailView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("\(items.count) items completed")
                             .font(.title2)
-                        ForEach(items.prefix(5), id: \.self) { item in
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.caption)
-                                Text(item)
-                                    .font(.caption)
-                            }
-                        }
-                        if items.count > 5 {
-                            Text("+ \(items.count - 5) more")
+                        if let latest = items.sorted(by: { $0.date > $1.date }).first {
+                            Text("Latest: \(latest.title) on \(formatDate(latest.date))")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -255,17 +297,69 @@ struct GoalDetailView: View {
                         
                         Button("Add") {
                             if !newListItem.isEmpty {
-                                var items = myProgressData?.listItems ?? []
-                                items.append(newListItem)
+                                let newEntry = GoalListItem(title: newListItem, date: Date())
+                                let itemToAdd = newListItem
+                                // Clear input immediately
+                                newListItem = ""
+                                
+                                // Optimistic update - update local state immediately for instant UI feedback
+                                var currentItems = myProgress?.listItems ?? myProgressData?.listItems ?? []
+                                currentItems.append(newEntry)
+                                
+                                // Update myProgress state immediately
+                                if var existingProgress = myProgress {
+                                    existingProgress.listItems = currentItems
+                                    myProgress = existingProgress
+                                } else if var existingProgress = myProgressData {
+                                    existingProgress.listItems = currentItems
+                                    myProgress = existingProgress
+                                } else {
+                                    // Create new progress
+                                    let currentUserId = isCreator ? goalWithProgress.goal.creatorId : (goalWithProgress.goal.buddyId ?? UUID())
+                                    myProgress = GoalProgress(
+                                        id: UUID(),
+                                        goalId: goalWithProgress.goal.id,
+                                        userId: currentUserId,
+                                        listItems: currentItems
+                                    )
+                                }
+                                
+                                // Update goalWithProgress for immediate UI update
+                                if isCreator {
+                                    if var creatorProgress = goalWithProgress.creatorProgress {
+                                        creatorProgress.listItems = currentItems
+                                        goalWithProgress.creatorProgress = creatorProgress
+                                    } else {
+                                        goalWithProgress.creatorProgress = GoalProgress(
+                                            id: UUID(),
+                                            goalId: goalWithProgress.goal.id,
+                                            userId: goalWithProgress.goal.creatorId,
+                                            listItems: currentItems
+                                        )
+                                    }
+                                } else {
+                                    if var buddyProgress = goalWithProgress.buddyProgress {
+                                        buddyProgress.listItems = currentItems
+                                        goalWithProgress.buddyProgress = buddyProgress
+                                    } else if let buddyId = goalWithProgress.goal.buddyId {
+                                        goalWithProgress.buddyProgress = GoalProgress(
+                                            id: UUID(),
+                                            goalId: goalWithProgress.goal.id,
+                                            userId: buddyId,
+                                            listItems: currentItems
+                                        )
+                                    }
+                                }
+                                
+                                // Then sync with server in background
                                 Task {
                                     await viewModel.updateGoalProgress(
                                         goalId: goalWithProgress.goal.id,
-                                        listItems: items
+                                        listItems: currentItems
                                     )
-                                    // Reload goals to get updated progress
+                                    // Reload to ensure sync and get any updates from buddy
                                     await viewModel.loadGoals()
                                 }
-                                newListItem = ""
                             }
                         }
                         .buttonStyle(.borderedProminent)
@@ -292,5 +386,7 @@ struct GoalDetailView: View {
         }
         return dateString
     }
+    
 }
+
 

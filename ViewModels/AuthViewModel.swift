@@ -43,12 +43,12 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    func signUp(email: String, password: String) async {
+    func signUp(email: String, password: String, username: String, fullName: String) async {
         isLoading = true
         errorMessage = nil
         
         do {
-            try await supabaseService.signUp(email: email, password: password)
+            try await supabaseService.signUp(email: email, password: password, username: username, fullName: fullName)
             // Check if user is authenticated (has session) or needs email confirmation
             await checkAuthStatusAsync()
             

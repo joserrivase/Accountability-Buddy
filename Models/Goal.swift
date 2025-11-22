@@ -115,7 +115,7 @@ struct GoalProgress: Identifiable, Codable {
     let userId: UUID
     var numericValue: Double?
     var completedDays: [String]? // Array of date strings (YYYY-MM-DD)
-    var listItems: [String]? // Array of completed items
+    var listItems: [GoalListItem]? // Array of completed items with timestamps
     let updatedAt: Date
     
     enum CodingKeys: String, CodingKey {
@@ -128,7 +128,7 @@ struct GoalProgress: Identifiable, Codable {
         case updatedAt = "updated_at"
     }
     
-    init(id: UUID, goalId: UUID, userId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [String]? = nil, updatedAt: Date = Date()) {
+    init(id: UUID, goalId: UUID, userId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [GoalListItem]? = nil, updatedAt: Date = Date()) {
         self.id = id
         self.goalId = goalId
         self.userId = userId
@@ -145,7 +145,7 @@ struct GoalProgress: Identifiable, Codable {
         userId = try container.decode(UUID.self, forKey: .userId)
         numericValue = try container.decodeIfPresent(Double.self, forKey: .numericValue)
         completedDays = try container.decodeIfPresent([String].self, forKey: .completedDays)
-        listItems = try container.decodeIfPresent([String].self, forKey: .listItems)
+        listItems = try container.decodeIfPresent([GoalListItem].self, forKey: .listItems)
         
         // Decode date from ISO8601 string
         let dateFormatter = ISO8601DateFormatter()
@@ -188,6 +188,49 @@ struct GoalWithProgress: Identifiable, Equatable {
         return lhs.goal.id == rhs.goal.id &&
                lhs.creatorProgress?.id == rhs.creatorProgress?.id &&
                lhs.buddyProgress?.id == rhs.buddyProgress?.id
+    }
+}
+
+struct GoalListItem: Identifiable, Codable, Equatable {
+    let id: UUID
+    let title: String
+    let date: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case date
+    }
+    
+    init(id: UUID = UUID(), title: String, date: Date = Date()) {
+        self.id = id
+        self.title = title
+        self.date = date
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        let dateString = try container.decode(String.self, forKey: .date)
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let decodedDate = formatter.date(from: dateString) {
+            date = decodedDate
+        } else {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: dateString) ?? Date()
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        try container.encode(formatter.string(from: date), forKey: .date)
     }
 }
 

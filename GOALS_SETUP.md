@@ -70,6 +70,15 @@ CREATE TRIGGER update_goals_updated_at BEFORE UPDATE ON goals
 
 5. Click **"Run"** to execute the query
 
+> **Note:** If you created the `goal_progress` table before this update and the `list_items` column is still of type `TEXT[]`, run the following command to convert it to `JSONB` so we can store structured list entries with timestamps:
+>
+> ```sql
+> ALTER TABLE goal_progress
+> ALTER COLUMN list_items TYPE JSONB USING list_items::jsonb;
+> ```
+>
+> (Run this only once to migrate existing setups.)
+
 ## 2. Create Goal Progress Table
 
 1. In the same SQL Editor, create a new query
@@ -83,7 +92,7 @@ CREATE TABLE IF NOT EXISTS goal_progress (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     numeric_value DOUBLE PRECISION,
     completed_days TEXT[], -- Array of date strings (YYYY-MM-DD)
-    list_items TEXT[], -- Array of completed items
+    list_items JSONB, -- Array of completed items (stored as JSON objects with id/title/date)
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()) NOT NULL,
     UNIQUE(goal_id, user_id)
 );
