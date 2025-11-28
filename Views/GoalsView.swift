@@ -12,25 +12,51 @@ struct GoalsView: View {
     @StateObject private var viewModel = GoalsViewModel()
     @StateObject private var friendsViewModel = FriendsViewModel()
     @State private var showingAddGoal = false
+    @State private var selectedView: GoalViewType = .active
+    
+    enum GoalViewType: String, CaseIterable {
+        case active = "Active"
+        case finished = "Finished"
+    }
+    
+    private var filteredGoals: [GoalWithProgress] {
+        switch selectedView {
+        case .active:
+            // For now, show all goals as active (will be updated later when finished criteria is defined)
+            return viewModel.goals
+        case .finished:
+            // For now, show empty list (will be updated later when finished criteria is defined)
+            return []
+        }
+    }
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
+                // Toggle between Active and Finished
+                Picker("Goal View", selection: $selectedView) {
+                    ForEach(GoalViewType.allCases, id: \.self) { viewType in
+                        Text(viewType.rawValue).tag(viewType)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding()
+                
                 // Goals List
-                if viewModel.isLoading && viewModel.goals.isEmpty {
+                if viewModel.isLoading && filteredGoals.isEmpty {
                     Spacer()
                     ProgressView()
                     Spacer()
-                } else if viewModel.goals.isEmpty {
+                } else if filteredGoals.isEmpty {
                     Spacer()
                     VStack(spacing: 16) {
-                        Image(systemName: "target")
+                        Image(systemName: selectedView == .active ? "target" : "checkmark.circle")
                             .font(.system(size: 60))
                             .foregroundColor(.secondary)
-                        Text("No goals yet")
+                        Text(selectedView == .active ? "No goals yet" : "No finished goals")
                             .font(.title2)
                             .foregroundColor(.secondary)
-                        Text("Tap the + button to create your first goal")
+                        Text(selectedView == .active ? "Tap the + button to create your first goal" : "Goals you've completed will appear here")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -39,7 +65,7 @@ struct GoalsView: View {
                     Spacer()
                 } else {
                     List {
-                        ForEach(viewModel.goals) { goalWithProgress in
+                        ForEach(filteredGoals) { goalWithProgress in
                             NavigationLink(destination: GoalDetailView(viewModel: viewModel, goalWithProgress: goalWithProgress).environmentObject(authViewModel)) {
                                 GoalRowView(goalWithProgress: goalWithProgress)
                             }
@@ -47,7 +73,7 @@ struct GoalsView: View {
                         .onDelete(perform: { indexSet in
                             for index in indexSet {
                                 Task {
-                                    await viewModel.deleteGoal(goalId: viewModel.goals[index].goal.id)
+                                    await viewModel.deleteGoal(goalId: filteredGoals[index].goal.id)
                                 }
                             }
                         })

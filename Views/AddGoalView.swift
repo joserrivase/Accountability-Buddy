@@ -125,10 +125,13 @@ struct AddGoalView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Create") {
                         Task {
+                            // Create empty questionnaire answers for legacy goal creation
+                            let emptyAnswers = GoalQuestionnaireAnswers()
                             await viewModel.createGoal(
                                 name: goalName,
                                 trackingMethod: selectedTrackingMethod,
-                                buddyId: selectedBuddy?.userId
+                                buddyId: selectedBuddy?.userId,
+                                questionnaireAnswers: emptyAnswers
                             )
                             if viewModel.errorMessage == nil {
                                 dismiss()

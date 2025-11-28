@@ -381,7 +381,7 @@ class SupabaseService {
         return allGoals.sorted { $0.updatedAt > $1.updatedAt }
     }
     
-    func createGoal(name: String, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID?) async throws -> Goal {
+    func createGoal(name: String, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID?, goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil) async throws -> Goal {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
@@ -391,7 +391,18 @@ class SupabaseService {
             name: name,
             trackingMethod: trackingMethod,
             creatorId: creatorId,
-            buddyId: buddyId
+            buddyId: buddyId,
+            goalType: goalType,
+            taskBeingTracked: taskBeingTracked,
+            listItems: listItems,
+            keepStreak: keepStreak,
+            trackDailyQuantity: trackDailyQuantity,
+            unitTracked: unitTracked,
+            challengeOrFriendly: challengeOrFriendly,
+            winningCondition: winningCondition,
+            winningNumber: winningNumber,
+            endDate: endDate,
+            winnersPrize: winnersPrize
         )
         
         let response: Goal = try await client
@@ -401,6 +412,52 @@ class SupabaseService {
             .single()
             .execute()
             .value
+        
+        // Create initial progress entries for both creator and buddy (if exists)
+        // This ensures both users see each other's progress from the start
+        
+        // Create creator's progress
+        let creatorProgress = GoalProgress(
+            id: UUID(),
+            goalId: response.id,
+            userId: creatorId,
+            numericValue: nil,
+            completedDays: nil,
+            listItems: nil
+        )
+        
+        do {
+            _ = try await client
+                .from("goal_progress")
+                .insert(creatorProgress)
+                .execute()
+        } catch {
+            print("Error creating creator progress: \(error)")
+            // Continue even if creator progress creation fails
+        }
+        
+        // Create buddy's progress if buddy exists
+        // Initialize with empty listItems array (not nil) so the visual shows the buddy column
+        if let buddyId = buddyId {
+            let buddyProgress = GoalProgress(
+                id: UUID(),
+                goalId: response.id,
+                userId: buddyId,
+                numericValue: nil,
+                completedDays: nil,
+                listItems: [] // Empty array so buddy column shows up with all items unchecked
+            )
+            
+            do {
+                _ = try await client
+                    .from("goal_progress")
+                    .insert(buddyProgress)
+                    .execute()
+            } catch {
+                print("Error creating buddy progress: \(error)")
+                // Continue even if buddy progress creation fails - the view will handle it with fallback
+            }
+        }
         
         return response
     }

@@ -259,11 +259,12 @@ struct GoalReviewView: View {
         // Determine buddy ID
         let buddyId: UUID? = flowEngine.answers.isSolo == true ? nil : flowEngine.answers.buddyId
         
-        // Create the goal
+        // Create the goal with all questionnaire answers
         await goalsViewModel.createGoal(
             name: goalName,
             trackingMethod: trackingMethod,
-            buddyId: buddyId
+            buddyId: buddyId,
+            questionnaireAnswers: flowEngine.answers
         )
         
         if goalsViewModel.errorMessage == nil {

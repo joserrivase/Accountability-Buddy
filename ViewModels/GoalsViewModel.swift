@@ -57,7 +57,7 @@ class GoalsViewModel: ObservableObject {
         isLoading = false
     }
     
-    func createGoal(name: String, trackingMethod: TrackingMethod, buddyId: UUID?) async {
+    func createGoal(name: String, trackingMethod: TrackingMethod, buddyId: UUID?, questionnaireAnswers: GoalQuestionnaireAnswers) async {
         guard let userId = userId else {
             errorMessage = "User ID not available"
             return
@@ -71,7 +71,18 @@ class GoalsViewModel: ObservableObject {
                 name: name,
                 trackingMethod: trackingMethod,
                 creatorId: userId,
-                buddyId: buddyId
+                buddyId: buddyId,
+                goalType: questionnaireAnswers.goalType,
+                taskBeingTracked: questionnaireAnswers.taskBeingTracked,
+                listItems: questionnaireAnswers.listItems,
+                keepStreak: questionnaireAnswers.keepStreak,
+                trackDailyQuantity: questionnaireAnswers.trackDailyQuantity,
+                unitTracked: questionnaireAnswers.unitTracked,
+                challengeOrFriendly: questionnaireAnswers.challengeOrFriendly,
+                winningCondition: questionnaireAnswers.winningCondition,
+                winningNumber: questionnaireAnswers.winningNumber,
+                endDate: questionnaireAnswers.endDate,
+                winnersPrize: questionnaireAnswers.winnersPrize
             )
             await loadGoals()
         } catch {

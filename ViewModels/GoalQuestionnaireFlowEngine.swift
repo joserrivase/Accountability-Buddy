@@ -247,9 +247,50 @@ class GoalQuestionnaireFlowEngine: ObservableObject {
         guard let winningCondition = answers.winningCondition else { return nil }
         
         // Check if winning condition requires a number or date
-        if winningCondition.contains("X number") || winningCondition.contains("X number of") || winningCondition.contains("reach") {
+        // Check both the option ID and the title text (in case title is stored)
+        let lowercased = winningCondition.lowercased()
+        
+        // Option IDs that require a winning number
+        let numberRequiredIDs = [
+            "first_to_reach_x",
+            "first_to_complete_x_amount",
+            "first_to_reach_x_days_streak"
+        ]
+        
+        // Text patterns that indicate a number is needed
+        let numberRequiredPatterns = [
+            "x number",
+            "x number of",
+            "reach",
+            "complete x",
+            "target number",
+            "target amount"
+        ]
+        
+        // Option IDs that require an end date
+        let dateRequiredIDs = [
+            "most_by_end_date",
+            "most_days_by_end_date",
+            "longest_streak_by_end_date",
+            "most_amount_by_end_date"
+        ]
+        
+        // Text patterns that indicate an end date is needed
+        let dateRequiredPatterns = [
+            "end date",
+            "by end",
+            "by an end"
+        ]
+        
+        // Check if number is required
+        if numberRequiredIDs.contains(winningCondition) || 
+           numberRequiredPatterns.contains(where: { lowercased.contains($0) }) {
             return .winningNumber
-        } else if winningCondition.contains("end date") || winningCondition.contains("by") {
+        }
+        
+        // Check if date is required
+        if dateRequiredIDs.contains(winningCondition) ||
+           dateRequiredPatterns.contains(where: { lowercased.contains($0) }) {
             return .endDate
         }
         
