@@ -41,23 +41,12 @@ struct GoalReviewView: View {
                                 HStack {
                                     if let imageUrlString = buddy.profileImageUrl,
                                        let imageUrl = URL(string: imageUrlString) {
-                                        AsyncImage(url: imageUrl) { phase in
-                                            switch phase {
-                                            case .empty:
-                                                ProgressView()
-                                                    .frame(width: 30, height: 30)
-                                            case .success(let image):
-                                                image
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                            case .failure:
-                                                Image(systemName: "person.circle.fill")
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                            @unknown default:
-                                                EmptyView()
-                                            }
+                                        RemoteImageView(url: imageUrl) {
+                                            Circle()
+                                                .fill(Color(.systemGray5))
+                                                .overlay(ProgressView())
                                         }
+                                        .scaledToFill()
                                         .frame(width: 30, height: 30)
                                         .clipShape(Circle())
                                     } else {
@@ -125,9 +114,9 @@ struct GoalReviewView: View {
                         
                         // Challenge details
                         if flowEngine.answers.isChallenge {
-                            if let winningCondition = flowEngine.answers.winningCondition {
-                                ReviewSection(title: "Winning Condition") {
-                                    Text(winningCondition)
+                            if let objective = formattedChallengeObjective() {
+                                ReviewSection(title: "Challenge Objective") {
+                                    Text(objective)
                                         .font(.body)
                                 }
                             }
@@ -147,7 +136,7 @@ struct GoalReviewView: View {
                             }
                             
                             if let prize = flowEngine.answers.winnersPrize {
-                                ReviewSection(title: "Winner's Prize") {
+                                ReviewSection(title: "Challenge Stakes") {
                                     Text(prize)
                                         .font(.body)
                                 }
@@ -274,6 +263,51 @@ struct GoalReviewView: View {
         }
         
         isCreating = false
+    }
+}
+
+// MARK: - Helpers
+private extension GoalReviewView {
+    func formattedChallengeObjective() -> String? {
+        guard let raw = flowEngine.answers.winningCondition else { return nil }
+        let lc = raw.lowercased()
+        let unit = flowEngine.answers.unitTracked ?? "units"
+        let number = flowEngine.answers.winningNumber
+        let endDateString: String? = {
+            if let date = flowEngine.answers.endDate {
+                let df = DateFormatter()
+                df.dateStyle = .medium
+                df.timeStyle = .none
+                return df.string(from: date)
+            }
+            return nil
+        }()
+        
+        if lc.contains("first to reach") || lc.contains("first_to_reach_x") {
+            if let number = number {
+                return "First to reach \(number) \(unit)"
+            }
+            return "First to reach the target"
+        } else if lc.contains("first to complete") || lc.contains("first_to_complete_x_amount") {
+            if let number = number {
+                return "First to complete \(number) \(unit)"
+            }
+            return "First to complete the required amount"
+        } else if lc.contains("first to finish") || lc.contains("first_to_finish") {
+            return "First to finish the list"
+        } else if lc.contains("most_by_end_date") ||
+                    (lc.contains("most") && (lc.contains("end date") || lc.contains("end_date"))) {
+            if let endDateString = endDateString {
+                return "Most completed by \(endDateString)"
+            }
+            return "Most completed by the deadline"
+        }
+        
+        let prettified = raw
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prettified.isEmpty else { return nil }
+        return prettified.prefix(1).capitalized + prettified.dropFirst()
     }
 }
 

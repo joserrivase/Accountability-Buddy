@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var showingUpdateAccount = false
     @State private var showingDeleteConfirmation = false
     @State private var isDeleting = false
+    @State private var showingPrivacyPolicy = false
     
     var body: some View {
         NavigationView {
@@ -27,6 +28,18 @@ struct SettingsView: View {
                             Image(systemName: "person.circle")
                                 .foregroundColor(.blue)
                             Text("Update Account")
+                        }
+                    }
+                }
+                
+                Section(header: Text("Legal")) {
+                    Button(action: {
+                        showingPrivacyPolicy = true
+                    }) {
+                        HStack {
+                            Image(systemName: "doc.plaintext")
+                                .foregroundColor(.blue)
+                            Text("Privacy Policy")
                         }
                     }
                 }
@@ -74,6 +87,9 @@ struct SettingsView: View {
                             profileViewModel.setUserId(userId)
                         }
                 }
+            }
+            .sheet(isPresented: $showingPrivacyPolicy) {
+                PrivacyPolicyView()
             }
             .alert("Delete Account", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { }

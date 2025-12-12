@@ -7,6 +7,12 @@
 
 import Foundation
 
+enum GoalStatus: String, Codable {
+    case active = "active"
+    case pendingFinish = "pending_finish"
+    case finished = "finished"
+}
+
 enum TrackingMethod: String, Codable, CaseIterable {
     case inputNumbers = "input_numbers"
     case trackDaysCompleted = "track_days_completed"
@@ -57,6 +63,11 @@ struct Goal: Identifiable, Codable {
     let endDate: Date? // For challenge mode
     let winnersPrize: String? // For challenge mode
     
+    // Winner determination fields
+    let winnerUserId: UUID? // ID of the winner
+    let loserUserId: UUID? // ID of the loser
+    let goalStatus: GoalStatus? // Status of the goal
+    
     enum CodingKeys: String, CodingKey {
         case id
         case name
@@ -76,9 +87,12 @@ struct Goal: Identifiable, Codable {
         case winningNumber = "winning_number"
         case endDate = "end_date"
         case winnersPrize = "winners_prize"
+        case winnerUserId = "winner_user_id"
+        case loserUserId = "loser_user_id"
+        case goalStatus = "goal_status"
     }
     
-    init(id: UUID, name: String, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID? = nil, createdAt: Date = Date(), updatedAt: Date = Date(), goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil) {
+    init(id: UUID, name: String, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID? = nil, createdAt: Date = Date(), updatedAt: Date = Date(), goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil, winnerUserId: UUID? = nil, loserUserId: UUID? = nil, goalStatus: GoalStatus? = nil) {
         self.id = id
         self.name = name
         self.trackingMethod = trackingMethod
@@ -97,6 +111,9 @@ struct Goal: Identifiable, Codable {
         self.winningNumber = winningNumber
         self.endDate = endDate
         self.winnersPrize = winnersPrize
+        self.winnerUserId = winnerUserId
+        self.loserUserId = loserUserId
+        self.goalStatus = goalStatus
     }
     
     init(from decoder: Decoder) throws {
@@ -118,6 +135,9 @@ struct Goal: Identifiable, Codable {
         winningCondition = try container.decodeIfPresent(String.self, forKey: .winningCondition)
         winningNumber = try container.decodeIfPresent(Int.self, forKey: .winningNumber)
         winnersPrize = try container.decodeIfPresent(String.self, forKey: .winnersPrize)
+        winnerUserId = try container.decodeIfPresent(UUID.self, forKey: .winnerUserId)
+        loserUserId = try container.decodeIfPresent(UUID.self, forKey: .loserUserId)
+        goalStatus = try container.decodeIfPresent(GoalStatus.self, forKey: .goalStatus)
         
         // Decode dates from ISO8601 strings
         let dateFormatter = ISO8601DateFormatter()
@@ -171,6 +191,9 @@ struct Goal: Identifiable, Codable {
         try container.encodeIfPresent(winningCondition, forKey: .winningCondition)
         try container.encodeIfPresent(winningNumber, forKey: .winningNumber)
         try container.encodeIfPresent(winnersPrize, forKey: .winnersPrize)
+        try container.encodeIfPresent(winnerUserId, forKey: .winnerUserId)
+        try container.encodeIfPresent(loserUserId, forKey: .loserUserId)
+        try container.encodeIfPresent(goalStatus, forKey: .goalStatus)
         
         // Encode dates as ISO8601 strings
         let dateFormatter = ISO8601DateFormatter()
@@ -193,6 +216,7 @@ struct GoalProgress: Identifiable, Codable {
     var completedDays: [String]? // Array of date strings (YYYY-MM-DD)
     var listItems: [GoalListItem]? // Array of completed items with timestamps
     let updatedAt: Date
+    var hasSeenWinnerMessage: Bool? // Whether this user has seen the winner/loser message
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -202,9 +226,10 @@ struct GoalProgress: Identifiable, Codable {
         case completedDays = "completed_days"
         case listItems = "list_items"
         case updatedAt = "updated_at"
+        case hasSeenWinnerMessage = "has_seen_winner_message"
     }
     
-    init(id: UUID, goalId: UUID, userId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [GoalListItem]? = nil, updatedAt: Date = Date()) {
+    init(id: UUID, goalId: UUID, userId: UUID, numericValue: Double? = nil, completedDays: [String]? = nil, listItems: [GoalListItem]? = nil, updatedAt: Date = Date(), hasSeenWinnerMessage: Bool? = nil) {
         self.id = id
         self.goalId = goalId
         self.userId = userId
@@ -212,6 +237,7 @@ struct GoalProgress: Identifiable, Codable {
         self.completedDays = completedDays
         self.listItems = listItems
         self.updatedAt = updatedAt
+        self.hasSeenWinnerMessage = hasSeenWinnerMessage
     }
     
     init(from decoder: Decoder) throws {
@@ -222,6 +248,7 @@ struct GoalProgress: Identifiable, Codable {
         numericValue = try container.decodeIfPresent(Double.self, forKey: .numericValue)
         completedDays = try container.decodeIfPresent([String].self, forKey: .completedDays)
         listItems = try container.decodeIfPresent([GoalListItem].self, forKey: .listItems)
+        hasSeenWinnerMessage = try container.decodeIfPresent(Bool.self, forKey: .hasSeenWinnerMessage)
         
         // Decode date from ISO8601 string
         let dateFormatter = ISO8601DateFormatter()
@@ -244,6 +271,7 @@ struct GoalProgress: Identifiable, Codable {
         try container.encodeIfPresent(numericValue, forKey: .numericValue)
         try container.encodeIfPresent(completedDays, forKey: .completedDays)
         try container.encodeIfPresent(listItems, forKey: .listItems)
+        try container.encodeIfPresent(hasSeenWinnerMessage, forKey: .hasSeenWinnerMessage)
         
         // Encode date as ISO8601 string
         let dateFormatter = ISO8601DateFormatter()

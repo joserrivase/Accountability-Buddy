@@ -101,7 +101,7 @@ class GoalQuestionnaireFlowEngine: ObservableObject {
             id: .challengeOrFriendly,
             type: .multipleChoice,
             title: "Challenge or Friendly?",
-            description: "Do you want to have an ending winning condition to make this more competitive or keep it friendly?",
+            description: "Do you want to add a challenge objective to make this competitive or keep it friendly?",
             options: [
                 QuestionOption(
                     id: "friendly",
@@ -111,7 +111,7 @@ class GoalQuestionnaireFlowEngine: ObservableObject {
                 QuestionOption(
                     id: "challenge",
                     title: "Challenge",
-                    description: "Add a winning condition to make it competitive"
+                    description: "Add a challenge objective to make it competitive"
                 )
             ]
         ),
@@ -119,8 +119,8 @@ class GoalQuestionnaireFlowEngine: ObservableObject {
         .winningCondition: Question(
             id: .winningCondition,
             type: .multipleChoice,
-            title: "What's the winning condition?",
-            description: "How will the winner be determined?"
+            title: "What's the challenge objective?",
+            description: "How will the challenge be decided?"
         ),
         
         .winningNumber: Question(
@@ -142,8 +142,8 @@ class GoalQuestionnaireFlowEngine: ObservableObject {
         .winnersPrize: Question(
             id: .winnersPrize,
             type: .textInput,
-            title: "What is the winner's prize?",
-            description: "Put something on the line to keep you more motivated",
+            title: "What are the challenge stakes?",
+            description: "Put something on the line to keep you motivated",
             placeholder: "e.g., Winner buys dinner, Winner gets bragging rights",
             validation: ValidationRule(isRequired: true, minLength: 1, maxLength: 200)
         )

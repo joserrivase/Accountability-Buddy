@@ -481,33 +481,22 @@ struct QuestionnaireBuddyPickerView: View {
                         dismiss()
                     }) {
                         HStack {
-                            if let imageUrlString = friend.profileImageUrl,
-                               let imageUrl = URL(string: imageUrlString) {
-                                AsyncImage(url: imageUrl) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ProgressView()
-                                            .frame(width: 40, height: 40)
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                    case .failure:
-                                        Image(systemName: "person.circle.fill")
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                    @unknown default:
-                                        EmptyView()
-                                    }
-                                }
-                                .frame(width: 40, height: 40)
-                                .clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.circle.fill")
-                                    .resizable()
-                                    .frame(width: 40, height: 40)
-                                    .foregroundColor(.gray)
+                        if let imageUrlString = friend.profileImageUrl,
+                           let imageUrl = URL(string: imageUrlString) {
+                            RemoteImageView(url: imageUrl) {
+                                Circle()
+                                    .fill(Color(.systemGray5))
+                                    .overlay(ProgressView())
                             }
+                            .scaledToFill()
+                            .frame(width: 40, height: 40)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "person.circle.fill")
+                                .resizable()
+                                .frame(width: 40, height: 40)
+                                .foregroundColor(.gray)
+                        }
                             
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(friend.name ?? "No name")

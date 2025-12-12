@@ -42,16 +42,16 @@ class SupabaseService {
         }
         
         do {
-            let response = try await client.auth.signUp(
-                email: email,
-                password: password
-            )
-            
+        let response = try await client.auth.signUp(
+            email: email,
+            password: password
+        )
+        
             // Check if user was created successfully
             // If session is nil, it likely means email confirmation is required
             // This is still a successful sign-up, just needs email confirmation
             guard response.user != nil else {
-                throw SupabaseError.signUpFailed
+            throw SupabaseError.signUpFailed
             }
             
             let userId = response.user.id
@@ -186,59 +186,6 @@ class SupabaseService {
             .value
         
         return friendshipsAsUser + friendshipsAsFriend
-    }
-    
-    // MARK: - Books CRUD
-    
-    func fetchBooks(userId: UUID) async throws -> [Book] {
-        guard let client = client else {
-            throw SupabaseError.notInitialized
-        }
-        
-        let response: [Book] = try await client
-            .from("books")
-            .select()
-            .eq("user_id", value: userId.uuidString)
-            .order("created_at", ascending: false)
-            .execute()
-            .value
-        
-        return response
-    }
-    
-    func addBook(title: String, userId: UUID) async throws -> Book {
-        guard let client = client else {
-            throw SupabaseError.notInitialized
-        }
-        
-        let newBook = Book(
-            id: UUID(),
-            title: title,
-            userId: userId,
-            createdAt: Date()
-        )
-        
-        let response: Book = try await client
-            .from("books")
-            .insert(newBook)
-            .select()
-            .single()
-            .execute()
-            .value
-        
-        return response
-    }
-    
-    func deleteBook(bookId: UUID) async throws {
-        guard let client = client else {
-            throw SupabaseError.notInitialized
-        }
-        
-        try await client
-            .from("books")
-            .delete()
-            .eq("id", value: bookId.uuidString)
-            .execute()
     }
     
     // MARK: - Profile CRUD
@@ -462,39 +409,93 @@ class SupabaseService {
         return response
     }
     
-    func updateGoal(goalId: UUID, name: String? = nil, buddyId: UUID? = nil) async throws -> Goal {
+    func updateGoal(
+        goalId: UUID,
+        name: String? = nil,
+        buddyId: UUID? = nil,
+        taskBeingTracked: String? = nil,
+        listItems: [String]? = nil,
+        keepStreak: Bool? = nil,
+        trackDailyQuantity: Bool? = nil,
+        unitTracked: String? = nil,
+        challengeOrFriendly: String? = nil,
+        winningCondition: String? = nil,
+        winningNumber: Int? = nil,
+        endDate: Date? = nil,
+        winnersPrize: String? = nil
+    ) async throws -> Goal {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
         
         struct GoalUpdate: Codable {
             var name: String?
-            var buddyId: UUID?
+            var taskBeingTracked: String?
+            var listItems: [String]?
+            var keepStreak: Bool?
+            var trackDailyQuantity: Bool?
+            var unitTracked: String?
+            var challengeOrFriendly: String?
+            var winningCondition: String?
+            var winningNumber: Int?
+            var endDate: String?
+            var winnersPrize: String?
             var updatedAt: String
             
             enum CodingKeys: String, CodingKey {
                 case name
-                case buddyId = "buddy_id"
+                case taskBeingTracked = "task_being_tracked"
+                case listItems = "list_items"
+                case keepStreak = "keep_streak"
+                case trackDailyQuantity = "track_daily_quantity"
+                case unitTracked = "unit_tracked"
+                case challengeOrFriendly = "challenge_or_friendly"
+                case winningCondition = "winning_condition"
+                case winningNumber = "winning_number"
+                case endDate = "end_date"
+                case winnersPrize = "winners_prize"
                 case updatedAt = "updated_at"
+            }
+            
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(updatedAt, forKey: .updatedAt)
+                
+                // Only encode non-nil values
+                if let name = name { try container.encode(name, forKey: .name) }
+                if let taskBeingTracked = taskBeingTracked { try container.encode(taskBeingTracked, forKey: .taskBeingTracked) }
+                if let listItems = listItems { try container.encode(listItems, forKey: .listItems) }
+                if let keepStreak = keepStreak { try container.encode(keepStreak, forKey: .keepStreak) }
+                if let trackDailyQuantity = trackDailyQuantity { try container.encode(trackDailyQuantity, forKey: .trackDailyQuantity) }
+                if let unitTracked = unitTracked { try container.encode(unitTracked, forKey: .unitTracked) }
+                if let challengeOrFriendly = challengeOrFriendly { try container.encode(challengeOrFriendly, forKey: .challengeOrFriendly) }
+                if let winningCondition = winningCondition { try container.encode(winningCondition, forKey: .winningCondition) }
+                if let winningNumber = winningNumber { try container.encode(winningNumber, forKey: .winningNumber) }
+                if let endDate = endDate { try container.encode(endDate, forKey: .endDate) }
+                if let winnersPrize = winnersPrize { try container.encode(winnersPrize, forKey: .winnersPrize) }
             }
         }
         
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         
+        let endDateString: String? = endDate != nil ? dateFormatter.string(from: endDate!) : nil
+        
+        // Create update struct with all values (nil values will be handled by custom encoding)
         var updateData = GoalUpdate(
             name: name,
-            buddyId: buddyId,
+            taskBeingTracked: taskBeingTracked,
+            listItems: listItems,
+            keepStreak: keepStreak,
+            trackDailyQuantity: trackDailyQuantity,
+            unitTracked: unitTracked,
+            challengeOrFriendly: challengeOrFriendly,
+            winningCondition: winningCondition,
+            winningNumber: winningNumber,
+            endDate: endDateString,
+            winnersPrize: winnersPrize,
             updatedAt: dateFormatter.string(from: Date())
         )
-        
-        // Only include non-nil values
-        if name == nil {
-            updateData.name = nil
-        }
-        if buddyId == nil {
-            updateData.buddyId = nil
-        }
         
         let response: Goal = try await client
             .from("goals")
@@ -506,6 +507,37 @@ class SupabaseService {
             .value
         
         return response
+    }
+    
+    /// Mark a goal as finished
+    func markGoalAsFinished(goalId: UUID) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        struct GoalStatusUpdate: Codable {
+            let goalStatus: String
+            let updatedAt: String
+            
+            enum CodingKeys: String, CodingKey {
+                case goalStatus = "goal_status"
+                case updatedAt = "updated_at"
+            }
+        }
+        
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        let update = GoalStatusUpdate(
+            goalStatus: GoalStatus.finished.rawValue,
+            updatedAt: dateFormatter.string(from: Date())
+        )
+        
+        _ = try await client
+            .from("goals")
+            .update(update)
+            .eq("id", value: goalId.uuidString)
+            .execute()
     }
     
     func deleteGoal(goalId: UUID) async throws {
@@ -630,13 +662,18 @@ class SupabaseService {
                 }
             }
             
+            // Check for winner determination if this is a challenge goal
+            if goal.challengeOrFriendly == "challenge" {
+                try? await checkAndDetermineWinner(goalId: goalId)
+            }
+            
             return response
         } else {
             // Create new progress
             let newProgress = GoalProgress(
                 id: UUID(),
                 goalId: goalId,
-                userId: userId,
+            userId: userId,
                 numericValue: numericValue,
                 completedDays: completedDays,
                 listItems: listItems
@@ -645,11 +682,11 @@ class SupabaseService {
             let response: GoalProgress = try await client
                 .from("goal_progress")
                 .insert(newProgress)
-                .select()
-                .single()
-                .execute()
-                .value
-            
+            .select()
+            .single()
+            .execute()
+            .value
+        
             // Create notification for buddy if goal has a buddy
             if let buddyId = goal.buddyId, buddyId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
@@ -684,7 +721,482 @@ class SupabaseService {
                 }
             }
             
-            return response
+            // Check for winner determination if this is a challenge goal
+            if goal.challengeOrFriendly == "challenge" {
+                try? await checkAndDetermineWinner(goalId: goalId)
+            }
+        
+        return response
+        }
+    }
+    
+    // MARK: - Winner Determination
+    
+    /// Check if a winner condition is met and determine winner/loser
+    /// This should be called after progress updates for challenge goals
+    func checkAndDetermineWinner(goalId: UUID) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        print("🔍 Checking for winner - Goal ID: \(goalId)")
+        
+        // Fetch goal
+        let goals: [Goal] = try await client
+            .from("goals")
+            .select()
+            .eq("id", value: goalId.uuidString)
+            .execute()
+            .value
+        
+        guard let goal = goals.first else {
+            print("   ❌ Goal not found")
+            throw SupabaseError.custom("Goal not found")
+        }
+        
+        print("   📋 Goal: \(goal.name)")
+        print("   🎯 Type: \(goal.goalType ?? "nil")")
+        print("   ⚔️ Mode: \(goal.challengeOrFriendly ?? "nil")")
+        print("   📊 Status: \(goal.goalStatus?.rawValue ?? "nil")")
+        print("   👥 Buddy ID: \(goal.buddyId?.uuidString ?? "nil")")
+        print("   🏁 Winning Condition: \(goal.winningCondition ?? "nil")")
+        print("   🔢 Winning Number: \(goal.winningNumber?.description ?? "nil")")
+        
+        // Only process challenge goals that are still active
+        guard goal.challengeOrFriendly == "challenge",
+              (goal.goalStatus == nil || goal.goalStatus == .active || goal.goalStatus == .pendingFinish),
+              goal.goalStatus != .finished,
+              let buddyId = goal.buddyId else {
+            print("   ⏸️ Skipping winner check - Not a challenge, already finished, or no buddy")
+            return // Not a challenge or already finished or no buddy
+        }
+        
+        // Fetch all progress for this goal
+        let progressList = try await fetchGoalProgress(goalId: goalId)
+        let creatorProgress = progressList.first { $0.userId == goal.creatorId }
+        let buddyProgress = progressList.first { $0.userId == buddyId }
+        
+        // Create empty progress if it doesn't exist yet (for counting purposes)
+        let creatorProg = creatorProgress ?? GoalProgress(
+            id: UUID(),
+            goalId: goalId,
+            userId: goal.creatorId,
+            numericValue: nil,
+            completedDays: nil,
+            listItems: nil,
+            updatedAt: Date(),
+            hasSeenWinnerMessage: nil
+        )
+        
+        let buddyProg = buddyProgress ?? GoalProgress(
+            id: UUID(),
+            goalId: goalId,
+            userId: buddyId,
+            numericValue: nil,
+            completedDays: nil,
+            listItems: nil,
+            updatedAt: Date(),
+            hasSeenWinnerMessage: nil
+        )
+        
+        // Check if winner condition is met
+        let winner = try determineWinner(goal: goal, creatorProgress: creatorProg, buddyProgress: buddyProg)
+        
+        if let winnerId = winner {
+            let loserId = winnerId == goal.creatorId ? buddyId : goal.creatorId
+            
+            print("🏆 WINNER DETERMINED!")
+            print("   Goal: \(goal.name)")
+            print("   Winner ID: \(winnerId)")
+            print("   Loser ID: \(loserId)")
+            
+            // Update goal with winner/loser and set status to pending_finish
+            struct GoalUpdate: Codable {
+                let winnerUserId: UUID
+                let loserUserId: UUID
+                let goalStatus: String
+                
+                enum CodingKeys: String, CodingKey {
+                    case winnerUserId = "winner_user_id"
+                    case loserUserId = "loser_user_id"
+                    case goalStatus = "goal_status"
+                }
+            }
+            
+            let update = GoalUpdate(
+                winnerUserId: winnerId,
+                loserUserId: loserId,
+                goalStatus: GoalStatus.pendingFinish.rawValue
+            )
+            
+            let updatedGoal: Goal = try await client
+                .from("goals")
+                .update(update)
+                .eq("id", value: goalId.uuidString)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            print("   ✅ Goal status updated to: \(updatedGoal.goalStatus?.rawValue ?? "nil")")
+            
+            // Send notifications to both users
+            let winnerProfile = try? await fetchProfile(userId: winnerId)
+            let loserProfile = try? await fetchProfile(userId: loserId)
+            
+            // Notify winner
+            if let winnerName = winnerProfile?.name ?? winnerProfile?.username {
+                let winnerNotification = AppNotification(
+                    id: UUID(),
+                    userId: winnerId,
+                    type: .goalUpdate,
+                    title: "Goal Completed!",
+                    message: "You won the \"\(goal.name)\" goal!",
+                    relatedUserId: nil,
+                    relatedGoalId: goalId,
+                    isRead: false
+                )
+                _ = try? await createNotification(notification: winnerNotification)
+            }
+            
+            // Notify loser
+            if let loserName = loserProfile?.name ?? loserProfile?.username {
+                let loserNotification = AppNotification(
+                    id: UUID(),
+                    userId: loserId,
+                    type: .goalUpdate,
+                    title: "Goal Completed",
+                    message: "The \"\(goal.name)\" goal has been completed. Check it to see the results!",
+                    relatedUserId: nil,
+                    relatedGoalId: goalId,
+                    isRead: false
+                )
+                _ = try? await createNotification(notification: loserNotification)
+            }
+        }
+    }
+    
+    /// Determine winner based on goal type and winning condition
+    private func determineWinner(goal: Goal, creatorProgress: GoalProgress, buddyProgress: GoalProgress) throws -> UUID? {
+        guard let winningCondition = goal.winningCondition else {
+            return nil
+        }
+        
+        let condition = winningCondition.lowercased()
+        
+        // Get current counts for both users
+        let creatorCount = getCurrentCount(goal: goal, progress: creatorProgress)
+        let buddyCount = getCurrentCount(goal: goal, progress: buddyProgress)
+        
+        // Check different winning conditions
+        // For list_tracker: "First to reach X number of [task]" or "first_to_reach_x"
+        if condition.contains("first to reach") || condition.contains("first_to_reach_x") {
+            // First to reach X number
+            guard let target = goal.winningNumber else { return nil }
+            
+            // Debug logging
+            print("🎯 Winner Check - List Tracker 'First to Reach':")
+            print("   Goal ID: \(goal.id)")
+            print("   Winning Condition: \(goal.winningCondition ?? "nil")")
+            print("   Target: \(target)")
+            print("   Creator Count: \(creatorCount)")
+            print("   Buddy Count: \(buddyCount)")
+            
+            // Check if creator wins
+            if creatorCount >= target && buddyCount < target {
+                print("   ✅ Creator wins! (\(creatorCount) >= \(target) and buddy has \(buddyCount))")
+                return goal.creatorId
+            }
+            // Check if buddy wins
+            else if buddyCount >= target && creatorCount < target {
+                print("   ✅ Buddy wins! (\(buddyCount) >= \(target) and creator has \(creatorCount))")
+                return goal.buddyId
+            } else {
+                print("   ⏳ No winner yet (Creator: \(creatorCount)/\(target), Buddy: \(buddyCount)/\(target))")
+            }
+        } else if condition.contains("first to finish") || condition.contains("first_to_finish") {
+            // First to finish the list (for user created list)
+            if let listItems = goal.listItems {
+                let creatorCompleted = creatorProgress.listItems?.count ?? 0
+                let buddyCompleted = buddyProgress.listItems?.count ?? 0
+                if creatorCompleted >= listItems.count && buddyCompleted < listItems.count {
+                    return goal.creatorId
+                } else if buddyCompleted >= listItems.count && creatorCompleted < listItems.count {
+                    return goal.buddyId
+                }
+            }
+        } else if condition.contains("first to complete x") || condition.contains("first_to_complete_x_amount") {
+            // First to complete X amount (for daily tracker with quantity)
+            guard let target = goal.winningNumber else { return nil }
+            if creatorCount >= target && buddyCount < target {
+                return goal.creatorId
+            } else if buddyCount >= target && creatorCount < target {
+                return goal.buddyId
+            }
+        } else if condition.contains("first to reach x days streak") || condition.contains("first_to_reach_x_days_streak") {
+            // First to reach X days streak
+            guard let target = goal.winningNumber else { return nil }
+            let creatorStreak = calculateStreak(from: creatorProgress.completedDays ?? [])
+            let buddyStreak = calculateStreak(from: buddyProgress.completedDays ?? [])
+            if creatorStreak.current >= target && buddyStreak.current < target {
+                return goal.creatorId
+            } else if buddyStreak.current >= target && creatorStreak.current < target {
+                return goal.buddyId
+            }
+        } else if condition.contains("most by end date") || condition.contains("most_by_end_date") {
+            // Most by end date - check if end date has passed
+            guard let endDate = goal.endDate else { return nil }
+            let calendar = Calendar.current
+            let now = Date()
+            if calendar.compare(now, to: endDate, toGranularity: .day) == .orderedDescending {
+                // End date has passed, determine winner by count
+                if creatorCount > buddyCount {
+                    return goal.creatorId
+                } else if buddyCount > creatorCount {
+                    return goal.buddyId
+                }
+                // Tie - could return nil or handle tie scenario
+            }
+        } else if condition.contains("most days by end date") || condition.contains("most_days_by_end_date") {
+            // Most days by end date
+            guard let endDate = goal.endDate else { return nil }
+            let calendar = Calendar.current
+            let now = Date()
+            if calendar.compare(now, to: endDate, toGranularity: .day) == .orderedDescending {
+                let creatorDays = creatorProgress.completedDays?.count ?? 0
+                let buddyDays = buddyProgress.completedDays?.count ?? 0
+                if creatorDays > buddyDays {
+                    return goal.creatorId
+                } else if buddyDays > creatorDays {
+                    return goal.buddyId
+                }
+            }
+        } else if condition.contains("longest streak by end date") || condition.contains("longest_streak_by_end_date") {
+            // Longest streak by end date
+            guard let endDate = goal.endDate else { return nil }
+            let calendar = Calendar.current
+            let now = Date()
+            if calendar.compare(now, to: endDate, toGranularity: .day) == .orderedDescending {
+                let creatorStreak = calculateStreak(from: creatorProgress.completedDays ?? [])
+                let buddyStreak = calculateStreak(from: buddyProgress.completedDays ?? [])
+                if creatorStreak.max > buddyStreak.max {
+                    return goal.creatorId
+                } else if buddyStreak.max > creatorStreak.max {
+                    return goal.buddyId
+                }
+            }
+        } else if condition.contains("most amount by end date") || condition.contains("most_amount_by_end_date") {
+            // Most amount by end date (for daily tracker with quantity)
+            guard let endDate = goal.endDate else { return nil }
+            let calendar = Calendar.current
+            let now = Date()
+            if calendar.compare(now, to: endDate, toGranularity: .day) == .orderedDescending {
+                if creatorCount > buddyCount {
+                    return goal.creatorId
+                } else if buddyCount > creatorCount {
+                    return goal.buddyId
+                }
+            }
+        }
+        
+        return nil // No winner determined yet
+    }
+    
+    /// Get current count for a user based on goal type
+    private func getCurrentCount(goal: Goal, progress: GoalProgress) -> Int {
+        switch goal.goalType {
+        case "list_tracker":
+            return progress.listItems?.count ?? 0
+        case "list_created_by_user":
+            return progress.listItems?.count ?? 0
+        case "daily_tracker":
+            if goal.trackDailyQuantity == true {
+                // Sum up quantities from listItems
+                let total = progress.listItems?.reduce(0.0) { sum, item in
+                    sum + (Double(item.title) ?? 0.0)
+                } ?? 0.0
+                return Int(total)
+            } else {
+                return progress.completedDays?.count ?? 0
+            }
+        default:
+            return progress.listItems?.count ?? 0
+        }
+    }
+    
+    /// Calculate streak from completed days
+    private func calculateStreak(from completedDays: [String]) -> (current: Int, max: Int) {
+        guard !completedDays.isEmpty else { return (0, 0) }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        
+        // Sort dates
+        let sortedDates = completedDays.compactMap { dateFormatter.date(from: $0) }.sorted()
+        
+        guard !sortedDates.isEmpty else { return (0, 0) }
+        
+        var currentStreak = 1
+        var maxStreak = 1
+        var previousDate: Date? = nil
+        
+        for date in sortedDates {
+            if let prev = previousDate {
+                let daysDiff = Calendar.current.dateComponents([.day], from: prev, to: date).day ?? 0
+                if daysDiff == 1 {
+                    currentStreak += 1
+                    maxStreak = max(maxStreak, currentStreak)
+                } else {
+                    currentStreak = 1
+                }
+            }
+            previousDate = date
+        }
+        
+        // Check if current streak includes today
+        let today = Calendar.current.startOfDay(for: Date())
+        if let lastDate = sortedDates.last,
+           Calendar.current.isDate(lastDate, inSameDayAs: today) ||
+           Calendar.current.isDate(lastDate, inSameDayAs: Calendar.current.date(byAdding: .day, value: -1, to: today) ?? today) {
+            // Streak is current
+        } else {
+            currentStreak = 0
+        }
+        
+        return (currentStreak, maxStreak)
+    }
+    
+    /// Check end dates for goals and determine winners
+    /// This should be called periodically (e.g., via cron job or scheduled task)
+    func checkEndDatesAndDetermineWinners() async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        // Fetch all active challenge goals with end dates
+        let now = Date()
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let nowString = dateFormatter.string(from: now)
+        
+        // Note: This query would need to be adjusted based on your Supabase setup
+        // For now, we'll fetch all challenge goals and filter client-side
+        let goals: [Goal] = try await client
+            .from("goals")
+            .select()
+            .eq("challenge_or_friendly", value: "challenge")
+            .execute()
+            .value
+        
+        // Filter goals where end date has passed and status is still active
+        let expiredGoals = goals.filter { goal in
+            guard let endDate = goal.endDate else {
+                return false
+            }
+            // Only process goals that are active (nil defaults to active) or pending_finish
+            let isActive = goal.goalStatus == nil || goal.goalStatus == .active || goal.goalStatus == .pendingFinish
+            if !isActive {
+                return false
+            }
+            return Calendar.current.compare(now, to: endDate, toGranularity: .day) != .orderedAscending
+        }
+        
+        // Check and determine winners for each expired goal
+        for goal in expiredGoals {
+            try? await checkAndDetermineWinner(goalId: goal.id)
+        }
+    }
+    
+    /// Mark that a user has seen the winner message
+    func markWinnerMessageSeen(goalId: UUID, userId: UUID) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        // Update progress to mark message as seen
+        struct ProgressUpdate: Codable {
+            let hasSeenWinnerMessage: Bool
+            
+            enum CodingKeys: String, CodingKey {
+                case hasSeenWinnerMessage = "has_seen_winner_message"
+            }
+        }
+        
+        let update = ProgressUpdate(hasSeenWinnerMessage: true)
+        
+        // Find the progress entry
+        let progressList: [GoalProgress] = try await client
+            .from("goal_progress")
+            .select()
+            .eq("goal_id", value: goalId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+            .value
+        
+        if let progress = progressList.first {
+            _ = try await client
+                .from("goal_progress")
+                .update(update)
+                .eq("id", value: progress.id.uuidString)
+                .execute()
+        } else {
+            // Create progress entry if it doesn't exist
+            let newProgress = GoalProgress(
+                id: UUID(),
+                goalId: goalId,
+                userId: userId,
+                hasSeenWinnerMessage: true
+            )
+            _ = try await client
+                .from("goal_progress")
+                .insert(newProgress)
+                .execute()
+        }
+        
+        // Check if both users have seen the message, then mark goal as finished
+        let allProgress: [GoalProgress] = try await client
+            .from("goal_progress")
+            .select()
+            .eq("goal_id", value: goalId.uuidString)
+            .execute()
+            .value
+        
+        // Fetch goal to get creator and buddy IDs
+        let goals: [Goal] = try await client
+            .from("goals")
+            .select()
+            .eq("id", value: goalId.uuidString)
+            .execute()
+            .value
+        
+        guard let goal = goals.first,
+              let buddyId = goal.buddyId else {
+            return
+        }
+        
+        let creatorProgress = allProgress.first { $0.userId == goal.creatorId }
+        let buddyProgress = allProgress.first { $0.userId == buddyId }
+        
+        let creatorSeen = creatorProgress?.hasSeenWinnerMessage == true
+        let buddySeen = buddyProgress?.hasSeenWinnerMessage == true
+        
+        if creatorSeen && buddySeen {
+            // Both users have seen the message, mark goal as finished
+            struct GoalUpdate: Codable {
+                let goalStatus: String
+                
+                enum CodingKeys: String, CodingKey {
+                    case goalStatus = "goal_status"
+                }
+            }
+            
+            let update = GoalUpdate(goalStatus: GoalStatus.finished.rawValue)
+            
+            _ = try await client
+                .from("goals")
+                .update(update)
+                .eq("id", value: goalId.uuidString)
+                .execute()
         }
     }
     
@@ -1213,6 +1725,30 @@ class SupabaseService {
             .delete()
             .eq("id", value: notificationId.uuidString)
             .execute()
+    }
+    
+    // MARK: - Feedback CRUD
+    
+    func submitFeedback(name: String, email: String, message: String) async throws -> Feedback {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        let feedback = Feedback(
+            name: name,
+            email: email,
+            message: message
+        )
+        
+        let response: Feedback = try await client
+            .from("feedback")
+            .insert(feedback)
+            .select()
+            .single()
+            .execute()
+            .value
+        
+        return response
     }
 }
 

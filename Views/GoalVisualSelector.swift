@@ -36,23 +36,29 @@ struct GoalVisualSelector {
         
         switch goalType {
         case "list_tracker":
-            // Always include list and sumBox for list_tracker goals
-            var visuals: [VisualType] = [.list, .sumBox]
+            // Always include list for list_tracker goals
+            var visuals: [VisualType] = [.list]
             
             if isChallenge {
                 // Check winning condition (case-insensitive)
                 let lowercased = winningCondition.lowercased()
                 if lowercased.contains("first to reach") || lowercased.contains("first_to_reach_x") {
                     // Visual 2: List Tracker + Challenge + First to reach X
-                    // Add sumBoxGoal in addition to sumBox
+                    // Only show sumBoxGoal (not sumBox)
                     visuals.append(.sumBoxGoal)
                 } else if lowercased.contains("most_by_end_date") || 
                           (lowercased.contains("most") && (lowercased.contains("end date") || lowercased.contains("end_date"))) {
                     // Visual 3: List Tracker + Challenge + Most by end date
-                    // Add endDateBox in addition to sumBox
-                    // The view will handle showing a message if endDate is missing
+                    // Show sumBox and endDateBox
+                    visuals.append(.sumBox)
                     visuals.append(.endDateBox)
+                } else {
+                    // Other challenge conditions - show sumBox
+                    visuals.append(.sumBox)
                 }
+            } else {
+                // Friendly goals - show sumBox
+                visuals.append(.sumBox)
             }
             
             return visuals

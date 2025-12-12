@@ -88,23 +88,12 @@ struct FriendRowView: View {
             // Profile Image
             if let imageUrlString = friend.profileImageUrl,
                let imageUrl = URL(string: imageUrlString) {
-                AsyncImage(url: imageUrl) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                            .frame(width: 50, height: 50)
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    @unknown default:
-                        EmptyView()
-                    }
+                RemoteImageView(url: imageUrl) {
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .overlay(ProgressView())
                 }
+                .scaledToFill()
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())
             } else {

@@ -14,6 +14,8 @@ struct ProfileView: View {
     @StateObject private var friendsViewModel = FriendsViewModel()
     @State private var showingEditProfile = false
     @State private var showingSettings = false
+    @State private var showingMailComposer = false
+    @State private var userEmail: String? = nil
     
     var body: some View {
         NavigationView {
@@ -103,6 +105,31 @@ struct ProfileView: View {
                     .padding(.top, 20)
                     
                     Spacer()
+                    
+                    // Provide Feedback Button
+                    Button(action: {
+                        Task {
+                            // Get user email before showing form
+                            let email = await SupabaseService.shared.getCurrentUserEmail()
+                            await MainActor.run {
+                                userEmail = email
+                                showingMailComposer = true
+                            }
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "envelope.fill")
+                            Text("Provide Feedback")
+                        }
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
             }
             .navigationTitle("")
@@ -122,6 +149,16 @@ struct ProfileView: View {
                 SettingsView(authViewModel: authViewModel)
                     .environmentObject(authViewModel)
             }
+            .sheet(isPresented: $showingMailComposer) {
+                let userName = viewModel.profile?.name ?? viewModel.profile?.username
+                let email = userEmail
+                
+                FeedbackFormView(
+                    isPresented: $showingMailComposer,
+                    preFilledName: userName,
+                    preFilledEmail: email
+                )
+            }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") {
                     viewModel.errorMessage = nil
@@ -139,12 +176,6 @@ struct ProfileView: View {
                 }
             }
         }
-    }
-    
-    private func getCurrentUserEmail() -> String? {
-        // Note: We'd need to extend AuthViewModel or SupabaseService to get email
-        // For now, return nil or implement email retrieval
-        return nil
     }
 }
 

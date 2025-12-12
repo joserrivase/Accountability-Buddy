@@ -318,6 +318,8 @@ struct CalendarWithCheckVisual: View {
     let buddyName: String?
     
     @State private var currentMonth: Date = Date()
+    @State private var localMyCompletedDays: [String] = []
+    @State private var localBuddyCompletedDays: [String]? = nil
     
     private let calendar = Calendar.current
     private let dateFormatter: DateFormatter = {
@@ -326,15 +328,6 @@ struct CalendarWithCheckVisual: View {
         return formatter
     }()
     
-    // Legacy initializer for backward compatibility
-    init(completedDays: [String], onDateTap: ((String) -> Void)? = nil) {
-        self.myCompletedDays = completedDays
-        self.buddyCompletedDays = nil
-        self.onDateTap = onDateTap
-        self.isCreator = true
-        self.creatorName = "Creator"
-        self.buddyName = nil
-    }
     
     // New initializer with both users' data
     init(myCompletedDays: [String], buddyCompletedDays: [String]?, onDateTap: ((String) -> Void)? = nil, isCreator: Bool, creatorName: String, buddyName: String?) {
@@ -344,6 +337,21 @@ struct CalendarWithCheckVisual: View {
         self.isCreator = isCreator
         self.creatorName = creatorName
         self.buddyName = buddyName
+        // Initialize local state with the provided values
+        _localMyCompletedDays = State(initialValue: myCompletedDays)
+        _localBuddyCompletedDays = State(initialValue: buddyCompletedDays)
+    }
+    
+    // Legacy initializer - also initialize local state
+    init(completedDays: [String], onDateTap: ((String) -> Void)? = nil) {
+        self.myCompletedDays = completedDays
+        self.buddyCompletedDays = nil
+        self.onDateTap = onDateTap
+        self.isCreator = true
+        self.creatorName = "Creator"
+        self.buddyName = nil
+        _localMyCompletedDays = State(initialValue: completedDays)
+        _localBuddyCompletedDays = State(initialValue: nil)
     }
     
     var body: some View {
@@ -403,13 +411,25 @@ struct CalendarWithCheckVisual: View {
                 ForEach(calendarDays, id: \.self) { day in
                     if let day = day {
                         let dayString = dateFormatter.string(from: day)
-                        let isMyCompleted = myCompletedDays.contains(dayString)
-                        let isBuddyCompleted = buddyCompletedDays?.contains(dayString) ?? false
+                        // Use local state if available (for immediate updates), otherwise use props
+                        let effectiveMyDays = localMyCompletedDays.isEmpty ? myCompletedDays : localMyCompletedDays
+                        let effectiveBuddyDays = localBuddyCompletedDays ?? buddyCompletedDays
+                        let isMyCompleted = effectiveMyDays.contains(dayString)
+                        let isBuddyCompleted = effectiveBuddyDays?.contains(dayString) ?? false
                         let isToday = calendar.isDateInToday(day)
                         let isCurrentMonth = calendar.isDate(day, equalTo: currentMonth, toGranularity: .month)
                         
                         Button(action: {
                             if let onTap = onDateTap {
+                                // Update local state immediately for instant visual feedback
+                                if isMyCompleted {
+                                    localMyCompletedDays.removeAll { $0 == dayString }
+                                } else {
+                                    if localMyCompletedDays.isEmpty {
+                                        localMyCompletedDays = myCompletedDays
+                                    }
+                                    localMyCompletedDays.append(dayString)
+                                }
                                 onTap(dayString)
                             }
                         }) {
@@ -447,6 +467,19 @@ struct CalendarWithCheckVisual: View {
         .padding()
         .background(Color(.systemGray6))
         .cornerRadius(12)
+        .onChange(of: myCompletedDays) { newDays in
+            // Sync local state when props update (from server)
+            localMyCompletedDays = newDays
+        }
+        .onChange(of: buddyCompletedDays) { newDays in
+            // Sync local state when props update (from server)
+            localBuddyCompletedDays = newDays
+        }
+        .onAppear {
+            // Initialize local state on appear
+            localMyCompletedDays = myCompletedDays
+            localBuddyCompletedDays = buddyCompletedDays
+        }
     }
     
     private var monthYearString: String {

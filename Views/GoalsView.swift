@@ -13,6 +13,7 @@ struct GoalsView: View {
     @StateObject private var friendsViewModel = FriendsViewModel()
     @State private var showingAddGoal = false
     @State private var selectedView: GoalViewType = .active
+    @State private var profileNameCache: [UUID: String] = [:] // Cache for profile names
     
     enum GoalViewType: String, CaseIterable {
         case active = "Active"
@@ -20,13 +21,57 @@ struct GoalsView: View {
     }
     
     private var filteredGoals: [GoalWithProgress] {
+        guard let currentUserId = authViewModel.currentUserId else { return [] }
+        
         switch selectedView {
         case .active:
-            // For now, show all goals as active (will be updated later when finished criteria is defined)
-            return viewModel.goals
+            // Show goals that are:
+            // 1. Not finished (goalStatus != .finished)
+            // 2. Or pending_finish but current user hasn't seen the message yet
+            return viewModel.goals.filter { goalWithProgress in
+                // If goal is finished, don't show in active
+                if goalWithProgress.goal.goalStatus == .finished {
+                    return false
+                }
+                
+                // If goal is pending_finish, check if current user has seen the message
+                if goalWithProgress.goal.goalStatus == .pendingFinish {
+                    // Get current user's progress
+                    let myProgress = goalWithProgress.goal.creatorId == currentUserId 
+                        ? goalWithProgress.creatorProgress 
+                        : goalWithProgress.buddyProgress
+                    
+                    // Only show in active if user hasn't seen the message
+                    return myProgress?.hasSeenWinnerMessage != true
+                }
+                
+                // For all other statuses (active, nil), show in active
+                return true
+            }
         case .finished:
-            // For now, show empty list (will be updated later when finished criteria is defined)
-            return []
+            // Show goals that are:
+            // 1. Fully finished (goalStatus == .finished)
+            // 2. Or pending_finish AND current user has seen the message
+            return viewModel.goals.filter { goalWithProgress in
+                // If goal is fully finished, show it
+                if goalWithProgress.goal.goalStatus == .finished {
+                    return true
+                }
+                
+                // If goal is pending_finish, check if current user has seen the message
+                if goalWithProgress.goal.goalStatus == .pendingFinish {
+                    // Get current user's progress
+                    let myProgress = goalWithProgress.goal.creatorId == currentUserId 
+                        ? goalWithProgress.creatorProgress 
+                        : goalWithProgress.buddyProgress
+                    
+                    // Show in finished if user has seen the message
+                    return myProgress?.hasSeenWinnerMessage == true
+                }
+                
+                // All other statuses don't go in finished
+                return false
+            }
         }
     }
     
@@ -67,7 +112,11 @@ struct GoalsView: View {
                     List {
                         ForEach(filteredGoals) { goalWithProgress in
                             NavigationLink(destination: GoalDetailView(viewModel: viewModel, goalWithProgress: goalWithProgress).environmentObject(authViewModel)) {
-                                GoalRowView(goalWithProgress: goalWithProgress)
+                                GoalRowView(
+                                    goalWithProgress: goalWithProgress,
+                                    profileNameCache: profileNameCache
+                                )
+                                .environmentObject(authViewModel)
                             }
                         }
                         .onDelete(perform: { indexSet in
@@ -111,17 +160,80 @@ struct GoalsView: View {
                     viewModel.setUserId(userId)
                     friendsViewModel.setUserId(userId)
                 }
+                // Preload all profile names when view appears
+                Task {
+                    await preloadProfileNames()
+                }
+            }
+            .onChange(of: viewModel.goals) { _ in
+                // Reload profile names when goals change
+                Task {
+                    await preloadProfileNames()
+                }
             }
             .refreshable {
                 await viewModel.loadGoals()
+                await preloadProfileNames()
             }
         }
+    }
+    
+    /// Preload all profile names for goals to display them immediately
+    private func preloadProfileNames() async {
+        var cache: [UUID: String] = [:]
+        let supabaseService = SupabaseService.shared
+        
+        // Collect all unique user IDs from goals
+        var userIdsToLoad: Set<UUID> = []
+        for goalWithProgress in viewModel.goals {
+            userIdsToLoad.insert(goalWithProgress.goal.creatorId)
+            if let buddyId = goalWithProgress.goal.buddyId {
+                userIdsToLoad.insert(buddyId)
+            }
+        }
+        
+        // Load all profiles in parallel
+        await withTaskGroup(of: (UUID, String?).self) { group in
+            for userId in userIdsToLoad {
+                group.addTask {
+                    if let profile = try? await supabaseService.fetchProfile(userId: userId) {
+                        let name = profile.name ?? profile.username ?? "Buddy"
+                        return (userId, name)
+                    }
+                    return (userId, nil)
+                }
+            }
+            
+            for await (userId, name) in group {
+                if let name = name {
+                    cache[userId] = name
+                }
+            }
+        }
+        
+        profileNameCache = cache
     }
 }
 
 // Goal Row View
 struct GoalRowView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
     let goalWithProgress: GoalWithProgress
+    let profileNameCache: [UUID: String]
+    
+    private var otherPersonName: String? {
+        guard let currentUserId = authViewModel.currentUserId else { return nil }
+        
+        let otherPersonId: UUID?
+        if goalWithProgress.goal.creatorId == currentUserId {
+            otherPersonId = goalWithProgress.goal.buddyId
+        } else {
+            otherPersonId = goalWithProgress.goal.creatorId
+        }
+        
+        guard let otherPersonId = otherPersonId else { return nil }
+        return profileNameCache[otherPersonId]
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -134,18 +246,10 @@ struct GoalRowView: View {
                     .font(.headline)
                     .foregroundColor(.primary)
                 
-                HStack(spacing: 8) {
-                    Text(goalWithProgress.goal.trackingMethod.displayName)
+                if let name = otherPersonName {
+                    Text("With \(name)")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    if goalWithProgress.goal.buddyId != nil {
-                        Text("•")
-                            .foregroundColor(.secondary)
-                        Text("With Buddy")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
             }
             
