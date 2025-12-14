@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import Photos
 
 struct EditProfileView: View {
     @Environment(\.dismiss) var dismiss
@@ -17,6 +18,8 @@ struct EditProfileView: View {
     @State private var selectedImage: UIImage?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showingImagePicker = false
+    @State private var showingPermissionAlert = false
+    @State private var photoLibraryStatus: PHAuthorizationStatus = .notDetermined
     
     var body: some View {
         NavigationView {
@@ -79,9 +82,19 @@ struct EditProfileView: View {
                         Task {
                             if let data = try? await newItem?.loadTransferable(type: Data.self),
                                let image = UIImage(data: data) {
-                                selectedImage = image
+                                await MainActor.run {
+                                    selectedImage = image
+                                }
                             }
                         }
+                    }
+                    
+                    // Show message if photo library access is denied
+                    if photoLibraryStatus == .denied || photoLibraryStatus == .restricted {
+                        Text("Photo library access is required. Please enable it in Settings.")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .padding(.top, 4)
                     }
                 }
                 
@@ -114,7 +127,38 @@ struct EditProfileView: View {
             .onAppear {
                 username = viewModel.profile?.username ?? ""
                 name = viewModel.profile?.name ?? ""
+                checkPhotoLibraryPermission()
             }
+            .alert("Photo Library Access Required", isPresented: $showingPermissionAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Open Settings") {
+                    if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(settingsUrl)
+                    }
+                }
+            } message: {
+                Text("Please allow access to your photo library in Settings to select a profile picture.")
+            }
+        }
+    }
+    
+    private func checkPhotoLibraryPermission() {
+        photoLibraryStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        
+        // If permission is not determined, request it
+        if photoLibraryStatus == .notDetermined {
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+                DispatchQueue.main.async {
+                    photoLibraryStatus = status
+                    // If user denies, show alert to guide them to settings
+                    if status == .denied || status == .restricted {
+                        showingPermissionAlert = true
+                    }
+                }
+            }
+        } else if photoLibraryStatus == .denied || photoLibraryStatus == .restricted {
+            // Permission was previously denied, show alert when view appears
+            showingPermissionAlert = true
         }
     }
     

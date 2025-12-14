@@ -16,21 +16,7 @@ struct EditGoalView: View {
     @State private var editedAnswers: GoalQuestionnaireAnswers
     @State private var isSaving = false
     @State private var errorMessage: String?
-    @State private var editingField: EditingField? = nil
-    
-    enum EditingField {
-        case goalName
-        case taskBeingTracked
-        case listItems
-        case keepStreak
-        case trackDailyQuantity
-        case unitTracked
-        case challengeOrFriendly
-        case winningCondition
-        case winningNumber
-        case endDate
-        case winnersPrize
-    }
+    @State private var buddyName: String? = nil
     
     init(goal: Goal, viewModel: GoalsViewModel, onSave: ((Goal) -> Void)? = nil) {
         self.goal = goal
@@ -59,217 +45,197 @@ struct EditGoalView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Goal Summary with Edit Buttons
-                    VStack(alignment: .leading, spacing: 16) {
-                        // Goal Name - Editable
-                        EditableReviewSection(
-                            title: "Goal Name",
-                            value: editedAnswers.goalName ?? "Not set",
-                            isEditing: editingField == .goalName
-                        ) {
-                            editingField = .goalName
-                        } onEdit: { newValue in
-                            editedAnswers.goalName = newValue.isEmpty ? nil : newValue
-                            editingField = nil
-                        }
-                        
-                        // Goal Type - Not Editable
-                        ReviewSection(title: "Goal Type") {
-                            Text(getGoalTypeDisplayName())
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        // Buddy - Not Editable
-                        ReviewSection(title: "Accountability") {
-                            if goal.buddyId == nil {
-                                Text("Solo Goal")
-                                    .font(.body)
+            Form {
+                // Basic Information
+                Section(header: Text("Basic Information")) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Goal Name")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        TextField("Enter goal name", text: Binding(
+                            get: { editedAnswers.goalName ?? "" },
+                            set: { editedAnswers.goalName = $0.isEmpty ? nil : $0 }
+                        ))
+                    }
+                    
+                    // Goal Type - Read Only
+                    HStack {
+                        Text("Goal Type")
+                        Spacer()
+                        Text(getGoalTypeDisplayName())
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Accountability Buddy
+                    HStack {
+                        Text("Accountability Buddy")
+                        Spacer()
+                        if let buddyId = goal.buddyId {
+                            if let name = buddyName {
+                                Text(name)
                                     .foregroundColor(.secondary)
                             } else {
-                                Text("With Accountability Buddy")
-                                    .font(.body)
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                        } else {
+                            Text("Solo Goal")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                
+                // Goal-Specific Fields
+                if let task = editedAnswers.taskBeingTracked {
+                    Section(header: Text("Task Details")) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Task Being Tracked")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            TextField("Enter task name", text: Binding(
+                                get: { task },
+                                set: { editedAnswers.taskBeingTracked = $0.isEmpty ? nil : $0 }
+                            ))
+                        }
+                    }
+                }
+                
+                if let items = editedAnswers.listItems, !items.isEmpty {
+                    Section(header: Text("List Items")) {
+                        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Item \(index + 1)")
+                                    .font(.subheadline)
                                     .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        // Goal-specific editable fields
-                        if let task = editedAnswers.taskBeingTracked {
-                            EditableReviewSection(
-                                title: "Task Being Tracked",
-                                value: task,
-                                isEditing: editingField == .taskBeingTracked
-                            ) {
-                                editingField = .taskBeingTracked
-                            } onEdit: { newValue in
-                                editedAnswers.taskBeingTracked = newValue.isEmpty ? nil : newValue
-                                editingField = nil
-                            }
-                        }
-                        
-                        if let items = editedAnswers.listItems, !items.isEmpty {
-                            EditableListSection(
-                                title: "List Items",
-                                items: items,
-                                isEditing: editingField == .listItems
-                            ) {
-                                editingField = .listItems
-                            } onEdit: { newItems in
-                                editedAnswers.listItems = newItems
-                                editingField = nil
-                            }
-                        }
-                        
-                        if goal.goalType == "daily_tracker" {
-                            if let keepStreak = editedAnswers.keepStreak {
-                                EditableYesNoSection(
-                                    title: "Keep Streak",
-                                    value: keepStreak,
-                                    isEditing: editingField == .keepStreak
-                                ) {
-                                    editingField = .keepStreak
-                                } onEdit: { newValue in
-                                    editedAnswers.keepStreak = newValue
-                                    editingField = nil
-                                }
-                            }
-                            
-                            if let trackQuantity = editedAnswers.trackDailyQuantity {
-                                EditableYesNoSection(
-                                    title: "Track Daily Quantity",
-                                    value: trackQuantity,
-                                    isEditing: editingField == .trackDailyQuantity
-                                ) {
-                                    editingField = .trackDailyQuantity
-                                } onEdit: { newValue in
-                                    editedAnswers.trackDailyQuantity = newValue
-                                    editingField = nil
-                                }
-                                
-                                if trackQuantity, let unit = editedAnswers.unitTracked {
-                                    EditableReviewSection(
-                                        title: "Unit Tracked",
-                                        value: unit,
-                                        isEditing: editingField == .unitTracked
-                                    ) {
-                                        editingField = .unitTracked
-                                    } onEdit: { newValue in
-                                        editedAnswers.unitTracked = newValue.isEmpty ? nil : newValue
-                                        editingField = nil
+                                TextField("Enter item", text: Binding(
+                                    get: { item },
+                                    set: { newValue in
+                                        var updatedItems = items
+                                        if newValue.isEmpty {
+                                            updatedItems.remove(at: index)
+                                        } else {
+                                            updatedItems[index] = newValue
+                                        }
+                                        editedAnswers.listItems = updatedItems.isEmpty ? nil : updatedItems
                                     }
-                                }
+                                ))
                             }
                         }
-                        
-                        // Mode - Editable
-                        if let mode = editedAnswers.challengeOrFriendly {
-                            EditableModeSection(
-                                title: "Mode",
-                                value: mode,
-                                isEditing: editingField == .challengeOrFriendly
-                            ) {
-                                editingField = .challengeOrFriendly
-                            } onEdit: { newValue in
-                                editedAnswers.challengeOrFriendly = newValue
-                                editingField = nil
+                        .onDelete { indexSet in
+                            var updatedItems = items
+                            for index in indexSet.sorted(by: >) {
+                                updatedItems.remove(at: index)
                             }
+                            editedAnswers.listItems = updatedItems.isEmpty ? nil : updatedItems
                         }
                         
-                        // Challenge details - Editable
-                        if editedAnswers.isChallenge {
-                            if let winningCondition = editedAnswers.winningCondition {
-                                EditableReviewSection(
-                                    title: "Challenge Objective",
-                                    value: winningCondition,
-                                    isEditing: editingField == .winningCondition
-                                ) {
-                                    editingField = .winningCondition
-                                } onEdit: { newValue in
-                                    editedAnswers.winningCondition = newValue.isEmpty ? nil : newValue
-                                    editingField = nil
-                                }
-                            }
+                        Button("Add Item") {
+                            var updatedItems = items
+                            updatedItems.append("")
+                            editedAnswers.listItems = updatedItems
+                        }
+                    }
+                }
+                
+                // Daily Tracker Options
+                if goal.goalType == "daily_tracker" {
+                    Section(header: Text("Daily Tracker Options")) {
+                        if let keepStreak = editedAnswers.keepStreak {
+                            Toggle("Keep Streak", isOn: Binding(
+                                get: { keepStreak },
+                                set: { editedAnswers.keepStreak = $0 }
+                            ))
+                        }
+                        
+                        if let trackQuantity = editedAnswers.trackDailyQuantity {
+                            Toggle("Track Daily Quantity", isOn: Binding(
+                                get: { trackQuantity },
+                                set: { editedAnswers.trackDailyQuantity = $0 }
+                            ))
                             
-                            if let winningNumber = editedAnswers.winningNumber {
-                                EditableNumberSection(
-                                    title: "Target Number",
-                                    value: winningNumber,
-                                    isEditing: editingField == .winningNumber
-                                ) {
-                                    editingField = .winningNumber
-                                } onEdit: { newValue in
-                                    editedAnswers.winningNumber = newValue
-                                    editingField = nil
-                                }
-                            }
-                            
-                            if let endDate = editedAnswers.endDate {
-                                EditableDateSection(
-                                    title: "End Date",
-                                    value: endDate,
-                                    isEditing: editingField == .endDate
-                                ) {
-                                    editingField = .endDate
-                                } onEdit: { newValue in
-                                    editedAnswers.endDate = newValue
-                                    editingField = nil
-                                }
-                            }
-                            
-                            if let prize = editedAnswers.winnersPrize {
-                                EditableReviewSection(
-                                    title: "Challenge Stakes",
-                                    value: prize,
-                                    isEditing: editingField == .winnersPrize,
-                                    isMultiLine: true
-                                ) {
-                                    editingField = .winnersPrize
-                                } onEdit: { newValue in
-                                    editedAnswers.winnersPrize = newValue.isEmpty ? nil : newValue
-                                    editingField = nil
+                            if trackQuantity, let unit = editedAnswers.unitTracked {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Unit Tracked")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                    TextField("e.g., miles, pages, hours", text: Binding(
+                                        get: { unit },
+                                        set: { editedAnswers.unitTracked = $0.isEmpty ? nil : $0 }
+                                    ))
                                 }
                             }
                         }
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    .padding(.horizontal)
+                }
+                
+                // Challenge Settings
+                Section(header: Text("Challenge Settings")) {
+                    if let mode = editedAnswers.challengeOrFriendly {
+                        Picker("Mode", selection: Binding(
+                            get: { mode },
+                            set: { editedAnswers.challengeOrFriendly = $0 }
+                        )) {
+                            Text("Friendly").tag("friendly")
+                            Text("Challenge").tag("challenge")
+                        }
+                    }
                     
-                    if let errorMessage = errorMessage {
+                    if editedAnswers.isChallenge {
+                        // Challenge Objective Dropdown
+                        if let currentCondition = editedAnswers.winningCondition {
+                            Picker("Challenge Objective", selection: Binding(
+                                get: { currentCondition },
+                                set: { editedAnswers.winningCondition = $0.isEmpty ? nil : $0 }
+                            )) {
+                                ForEach(getWinningConditionOptions(), id: \.id) { option in
+                                    Text(option.title).tag(option.id)
+                                }
+                            }
+                        }
+                        
+                        if let winningNumber = editedAnswers.winningNumber {
+                            HStack {
+                                Text("Target Number")
+                                    .frame(width: 120, alignment: .leading)
+                                Stepper(value: Binding(
+                                    get: { winningNumber },
+                                    set: { editedAnswers.winningNumber = $0 }
+                                ), in: 1...10000) {
+                                    Text("\(winningNumber)")
+                                }
+                            }
+                        }
+                        
+                        if let endDate = editedAnswers.endDate {
+                            DatePicker("End Date", selection: Binding(
+                                get: { endDate },
+                                set: { editedAnswers.endDate = $0 }
+                            ), displayedComponents: .date)
+                        }
+                        
+                        if let prize = editedAnswers.winnersPrize {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Challenge Stakes")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                TextField("e.g., Winner buys dinner, Winner gets bragging rights", text: Binding(
+                                    get: { prize },
+                                    set: { editedAnswers.winnersPrize = $0.isEmpty ? nil : $0 }
+                                ), axis: .vertical)
+                                .lineLimit(3...6)
+                            }
+                        }
+                    }
+                }
+                
+                // Error Message
+                if let errorMessage = errorMessage {
+                    Section {
                         Text(errorMessage)
                             .foregroundColor(.red)
                             .font(.caption)
-                            .padding(.horizontal)
                     }
-                    
-                    // Save button
-                    Button(action: {
-                        Task {
-                            await saveGoal()
-                        }
-                    }) {
-                        HStack {
-                            if isSaving {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            }
-                            Text(isSaving ? "Saving..." : "Save Changes")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isSaving ? Color.gray : Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                    }
-                    .disabled(isSaving)
-                    .padding(.horizontal)
-                    .padding(.bottom)
                 }
-                .padding(.vertical)
             }
             .navigationTitle("Edit Goal")
             .navigationBarTitleDisplayMode(.inline)
@@ -279,6 +245,17 @@ struct EditGoalView: View {
                         dismiss()
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        Task {
+                            await saveGoal()
+                        }
+                    }
+                    .disabled(isSaving)
+                }
+            }
+            .onAppear {
+                loadBuddyName()
             }
         }
     }
@@ -293,6 +270,95 @@ struct EditGoalView: View {
             return "List Created By User"
         default:
             return "Not set"
+        }
+    }
+    
+    private func getWinningConditionOptions() -> [QuestionOption] {
+        // Compute winning condition options directly from editedAnswers
+        // This avoids modifying @Published properties during view updates
+        var options: [QuestionOption] = []
+        
+        switch editedAnswers.goalType {
+        case "list_tracker":
+            if let task = editedAnswers.taskBeingTracked {
+                options.append(QuestionOption(
+                    id: "first_to_reach_x",
+                    title: "First to reach X number of \(task)",
+                    description: "First person to complete a target number wins"
+                ))
+                options.append(QuestionOption(
+                    id: "most_by_end_date",
+                    title: "Most number of \(task) by an end date",
+                    description: "Whoever has the most by the end date wins"
+                ))
+            }
+            
+        case "list_created_by_user":
+            options.append(QuestionOption(
+                id: "first_to_finish",
+                title: "First to finish the list",
+                description: "First person to complete all items wins"
+            ))
+            options.append(QuestionOption(
+                id: "most_by_end_date",
+                title: "Most number of finished items by end date",
+                description: "Whoever has completed the most items by the end date wins"
+            ))
+            
+        case "daily_tracker":
+            options.append(QuestionOption(
+                id: "most_days_by_end_date",
+                title: "Most days completed by end date",
+                description: "Whoever has the most completed days wins"
+            ))
+            
+            if editedAnswers.keepStreak == true {
+                options.append(QuestionOption(
+                    id: "longest_streak_by_end_date",
+                    title: "Longest streak by end date",
+                    description: "Whoever has the longest continuous streak wins"
+                ))
+                options.append(QuestionOption(
+                    id: "first_to_reach_x_days_streak",
+                    title: "First to reach X number of days streak",
+                    description: "First person to reach a target streak length wins"
+                ))
+            }
+            
+            if editedAnswers.trackDailyQuantity == true, let unit = editedAnswers.unitTracked {
+                options.append(QuestionOption(
+                    id: "most_amount_by_end_date",
+                    title: "Most amount of \(unit) completed by end date",
+                    description: "Whoever has accumulated the most \(unit) wins"
+                ))
+                options.append(QuestionOption(
+                    id: "first_to_complete_x_amount",
+                    title: "First person to complete X number of \(unit)",
+                    description: "First person to reach a target amount wins"
+                ))
+            }
+            
+        default:
+            break
+        }
+        
+        return options
+    }
+    
+    private func loadBuddyName() {
+        guard let buddyId = goal.buddyId else { return }
+        
+        Task {
+            let supabaseService = SupabaseService.shared
+            if let buddyProfile = try? await supabaseService.fetchProfile(userId: buddyId) {
+                await MainActor.run {
+                    buddyName = buddyProfile.name ?? buddyProfile.username ?? "Buddy"
+                }
+            } else {
+                await MainActor.run {
+                    buddyName = "Buddy"
+                }
+            }
         }
     }
     
@@ -319,11 +385,15 @@ struct EditGoalView: View {
             
             // Reload goals to get updated data
             await viewModel.loadGoals()
+            
+            // Wait a moment for @Published property to update
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
 
             // Try to grab the freshly reloaded goal from the viewModel for immediate UI update
             await MainActor.run {
-                if let refreshedGoal = viewModel.goals.first(where: { $0.goal.id == goal.id })?.goal {
-                    onSave?(refreshedGoal)
+                if let refreshedGoalWithProgress = viewModel.goals.first(where: { $0.goal.id == goal.id }) {
+                    // Use the full GoalWithProgress from viewModel to ensure we have latest data
+                    onSave?(refreshedGoalWithProgress.goal)
                 } else {
                     // Fallback: construct a local updated goal so UI still updates immediately
                     let updatedGoal = Goal(
@@ -359,422 +429,5 @@ struct EditGoalView: View {
         }
         
         isSaving = false
-    }
-}
-
-// MARK: - Editable Review Section Component
-
-struct EditableReviewSection: View {
-    let title: String
-    let value: String
-    var isEditing: Bool = false
-    var isMultiLine: Bool = false
-    let onEditTap: () -> Void
-    let onEdit: (String) -> Void
-    
-    @State private var editValue: String = ""
-    @FocusState private var isFocused: Bool
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            if isEditing {
-                if isMultiLine {
-                    TextEditor(text: $editValue)
-                        .frame(height: 100)
-                        .padding(8)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.blue, lineWidth: 1)
-                        )
-                        .focused($isFocused)
-                        .onAppear {
-                            editValue = value
-                            isFocused = true
-                        }
-                } else {
-                    TextField("", text: $editValue)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .focused($isFocused)
-                        .onAppear {
-                            editValue = value
-                            isFocused = true
-                        }
-                }
-                
-                HStack {
-                    Button("Cancel") {
-                        isFocused = false
-                        onEdit(value) // Reset to original value
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Save") {
-                        isFocused = false
-                        onEdit(editValue)
-                    }
-                    .foregroundColor(.blue)
-                    .fontWeight(.semibold)
-                }
-            } else {
-                HStack {
-                    Text(value)
-                        .font(.body)
-                    Spacer()
-                    Button(action: onEditTap) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Editable Yes/No Section
-
-struct EditableYesNoSection: View {
-    let title: String
-    let value: Bool
-    var isEditing: Bool = false
-    let onEditTap: () -> Void
-    let onEdit: (Bool) -> Void
-    
-    @State private var editValue: Bool
-    
-    init(title: String, value: Bool, isEditing: Bool, onEditTap: @escaping () -> Void, onEdit: @escaping (Bool) -> Void) {
-        self.title = title
-        self.value = value
-        self.isEditing = isEditing
-        self.onEditTap = onEditTap
-        self.onEdit = onEdit
-        _editValue = State(initialValue: value)
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            if isEditing {
-                Picker("", selection: $editValue) {
-                    Text("Yes").tag(true)
-                    Text("No").tag(false)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                
-                HStack {
-                    Button("Cancel") {
-                        editValue = value
-                        onEdit(value)
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Save") {
-                        onEdit(editValue)
-                    }
-                    .foregroundColor(.blue)
-                    .fontWeight(.semibold)
-                }
-            } else {
-                HStack {
-                    Text(value ? "Yes" : "No")
-                        .font(.body)
-                    Spacer()
-                    Button(action: onEditTap) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Editable Mode Section
-
-struct EditableModeSection: View {
-    let title: String
-    let value: String
-    var isEditing: Bool = false
-    let onEditTap: () -> Void
-    let onEdit: (String) -> Void
-    
-    @State private var editValue: String
-    
-    init(title: String, value: String, isEditing: Bool, onEditTap: @escaping () -> Void, onEdit: @escaping (String) -> Void) {
-        self.title = title
-        self.value = value
-        self.isEditing = isEditing
-        self.onEditTap = onEditTap
-        self.onEdit = onEdit
-        _editValue = State(initialValue: value)
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            if isEditing {
-                Picker("", selection: $editValue) {
-                    Text("Challenge").tag("challenge")
-                    Text("Friendly").tag("friendly")
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                
-                HStack {
-                    Button("Cancel") {
-                        editValue = value
-                        onEdit(value)
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Save") {
-                        onEdit(editValue)
-                    }
-                    .foregroundColor(.blue)
-                    .fontWeight(.semibold)
-                }
-            } else {
-                HStack {
-                    Text(value == "challenge" ? "Challenge" : "Friendly")
-                        .font(.body)
-                    Spacer()
-                    Button(action: onEditTap) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Editable Number Section
-
-struct EditableNumberSection: View {
-    let title: String
-    let value: Int
-    var isEditing: Bool = false
-    let onEditTap: () -> Void
-    let onEdit: (Int?) -> Void
-    
-    @State private var editValue: String = ""
-    @FocusState private var isFocused: Bool
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            if isEditing {
-                TextField("", text: $editValue)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .focused($isFocused)
-                    .onAppear {
-                        editValue = "\(value)"
-                        isFocused = true
-                    }
-                
-                HStack {
-                    Button("Cancel") {
-                        isFocused = false
-                        onEdit(value) // Reset to original value
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Save") {
-                        isFocused = false
-                        let newValue = Int(editValue)
-                        onEdit(newValue)
-                    }
-                    .foregroundColor(.blue)
-                    .fontWeight(.semibold)
-                }
-            } else {
-                HStack {
-                    Text("\(value)")
-                        .font(.body)
-                    Spacer()
-                    Button(action: onEditTap) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Editable Date Section
-
-struct EditableDateSection: View {
-    let title: String
-    let value: Date
-    var isEditing: Bool = false
-    let onEditTap: () -> Void
-    let onEdit: (Date?) -> Void
-    
-    @State private var editValue: Date
-    
-    init(title: String, value: Date, isEditing: Bool, onEditTap: @escaping () -> Void, onEdit: @escaping (Date?) -> Void) {
-        self.title = title
-        self.value = value
-        self.isEditing = isEditing
-        self.onEditTap = onEditTap
-        self.onEdit = onEdit
-        _editValue = State(initialValue: value)
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            if isEditing {
-                DatePicker("", selection: $editValue, displayedComponents: .date)
-                    .datePickerStyle(CompactDatePickerStyle())
-                
-                HStack {
-                    Button("Cancel") {
-                        editValue = value
-                        onEdit(value)
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Save") {
-                        onEdit(editValue)
-                    }
-                    .foregroundColor(.blue)
-                    .fontWeight(.semibold)
-                }
-            } else {
-                HStack {
-                    Text(value, style: .date)
-                        .font(.body)
-                    Spacer()
-                    Button(action: onEditTap) {
-                        Image(systemName: "pencil")
-                            .foregroundColor(.blue)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Editable List Section
-
-struct EditableListSection: View {
-    let title: String
-    let items: [String]
-    var isEditing: Bool = false
-    let onEditTap: () -> Void
-    let onEdit: ([String]) -> Void
-    
-    @State private var editItems: [String] = []
-    @State private var newItem: String = ""
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
-            
-            if isEditing {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(editItems.enumerated()), id: \.offset) { index, item in
-                        HStack {
-                            TextField("Item", text: Binding(
-                                get: { item },
-                                set: { newValue in
-                                    editItems[index] = newValue
-                                }
-                            ))
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            
-                            Button(action: {
-                                editItems.remove(at: index)
-                            }) {
-                                Image(systemName: "trash")
-                                    .foregroundColor(.red)
-                            }
-                        }
-                    }
-                    
-                    HStack {
-                        TextField("New item", text: $newItem)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                        Button("Add") {
-                            if !newItem.isEmpty {
-                                editItems.append(newItem)
-                                newItem = ""
-                            }
-                        }
-                    }
-                }
-                
-                HStack {
-                    Button("Cancel") {
-                        editItems = items
-                        onEdit(items)
-                    }
-                    .foregroundColor(.red)
-                    
-                    Spacer()
-                    
-                    Button("Save") {
-                        onEdit(editItems)
-                    }
-                    .foregroundColor(.blue)
-                    .fontWeight(.semibold)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                        Text("\(index + 1). \(item)")
-                            .font(.caption)
-                    }
-                    
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            editItems = items
-                            onEditTap()
-                        }) {
-                            Image(systemName: "pencil")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-            }
-        }
     }
 }

@@ -16,6 +16,8 @@ struct ProfileView: View {
     @State private var showingSettings = false
     @State private var showingMailComposer = false
     @State private var userEmail: String? = nil
+    @State private var goalsCount: Int = 0
+    @State private var isLoadingGoalsCount = false
     
     var body: some View {
         NavigationView {
@@ -85,9 +87,14 @@ struct ProfileView: View {
                     // Stats Row
                     HStack(spacing: 40) {
                         VStack(spacing: 4) {
-                            Text("\(goalsViewModel.goals.count)")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                            if isLoadingGoalsCount && goalsCount == 0 {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("\(goalsCount)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                            }
                             Text("Goals")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -171,8 +178,38 @@ struct ProfileView: View {
             .onAppear {
                 if let userId = authViewModel.currentUserId {
                     viewModel.setUserId(userId)
-                    goalsViewModel.setUserId(userId)
                     friendsViewModel.setUserId(userId)
+                    // Load goals count quickly without loading all goal data
+                    loadGoalsCount(userId: userId)
+                    // Also load full goals in background (for other uses, but don't wait)
+                    goalsViewModel.setUserId(userId)
+                }
+            }
+            .onChange(of: goalsViewModel.goals) { _ in
+                // Update count when goals are loaded
+                goalsCount = goalsViewModel.goals.count
+                isLoadingGoalsCount = false
+            }
+        }
+        .navigationViewStyle(.stack) // Force stack style on iPad to avoid sidebar
+    }
+    
+    private func loadGoalsCount(userId: UUID) {
+        isLoadingGoalsCount = true
+        
+        Task {
+            // Load just the goals (without progress) to get a fast count
+            do {
+                let goals = try await SupabaseService.shared.fetchGoals(userId: userId)
+                await MainActor.run {
+                    goalsCount = goals.count
+                    isLoadingGoalsCount = false
+                }
+            } catch {
+                // If fast count fails, fall back to using goalsViewModel
+                await MainActor.run {
+                    isLoadingGoalsCount = false
+                    // Will be updated by onChange when goalsViewModel loads
                 }
             }
         }

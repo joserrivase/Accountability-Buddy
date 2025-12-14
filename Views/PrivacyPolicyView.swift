@@ -9,7 +9,7 @@ struct PrivacyPolicyView: View {
                         .font(.title)
                         .fontWeight(.bold)
                     
-                    Text("Last Updated: January 5, 2026")
+                    Text("Last Updated: December 11, 2025")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
@@ -84,7 +84,7 @@ struct PrivacyPolicyView: View {
                         Text("10. Contact")
                             .font(.headline)
                         Text("""
-                        • Email: support@accountabilitybuddy.app
+                        • Email: jose.r.rivas.e@gmail.com
                         """)
                     }
                     .font(.body)

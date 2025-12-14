@@ -91,4 +91,18 @@ class AuthViewModel: ObservableObject {
         
         isLoading = false
     }
+    
+    func resetPassword(email: String) async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            try await supabaseService.resetPassword(email: email)
+            errorMessage = "Password reset email sent! Please check your inbox and follow the instructions to reset your password."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
 }

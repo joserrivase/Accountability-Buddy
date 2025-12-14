@@ -162,6 +162,7 @@ struct NotificationsView: View {
                 await viewModel.loadNotifications()
             }
         }
+        .navigationViewStyle(.stack) // Force stack style on iPad to avoid sidebar
     }
     
 }

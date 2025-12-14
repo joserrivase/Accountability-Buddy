@@ -418,19 +418,40 @@ struct CalendarWithCheckVisual: View {
                         let isBuddyCompleted = effectiveBuddyDays?.contains(dayString) ?? false
                         let isToday = calendar.isDateInToday(day)
                         let isCurrentMonth = calendar.isDate(day, equalTo: currentMonth, toGranularity: .month)
+                        // Check if date is in the future (after today)
+                        let isFutureDate = day > Date()
                         
                         Button(action: {
-                            if let onTap = onDateTap {
-                                // Update local state immediately for instant visual feedback
-                                if isMyCompleted {
-                                    localMyCompletedDays.removeAll { $0 == dayString }
-                                } else {
-                                    if localMyCompletedDays.isEmpty {
-                                        localMyCompletedDays = myCompletedDays
-                                    }
-                                    localMyCompletedDays.append(dayString)
-                                }
+                            // Only allow action if date is not in the future
+                            if !isFutureDate, let onTap = onDateTap {
+                                // Call the tap handler first - it will handle the state update
+                                // For actions that require confirmation (like past dates in daily tracker),
+                                // the handler will return early and we won't update local state
                                 onTap(dayString)
+                                
+                                // Only update local state optimistically if the date is today or future
+                                // (for past dates that require confirmation, we wait for actual completion)
+                                let dateFormatter = DateFormatter()
+                                dateFormatter.dateFormat = "yyyy-MM-dd"
+                                if let date = dateFormatter.date(from: dayString) {
+                                    let calendar = Calendar.current
+                                    let today = calendar.startOfDay(for: Date())
+                                    let selectedDate = calendar.startOfDay(for: date)
+                                    
+                                    // Only do optimistic update for today or future dates
+                                    // Past dates require confirmation, so we wait for the actual state update
+                                    if selectedDate >= today {
+                                        // Update local state immediately for instant visual feedback
+                                        if isMyCompleted {
+                                            localMyCompletedDays.removeAll { $0 == dayString }
+                                        } else {
+                                            if localMyCompletedDays.isEmpty {
+                                                localMyCompletedDays = myCompletedDays
+                                            }
+                                            localMyCompletedDays.append(dayString)
+                                        }
+                                    }
+                                }
                             }
                         }) {
                             VStack(spacing: 2) {
@@ -457,6 +478,7 @@ struct CalendarWithCheckVisual: View {
                             .cornerRadius(8)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .disabled(isFutureDate)
                     } else {
                         Color.clear
                             .frame(width: 32, height: 32)
@@ -468,8 +490,13 @@ struct CalendarWithCheckVisual: View {
         .background(Color(.systemGray6))
         .cornerRadius(12)
         .onChange(of: myCompletedDays) { newDays in
-            // Sync local state when props update (from server)
+            // Sync local state when props update (from server or when popup is cancelled)
+            // This ensures the calendar reflects the actual state, not optimistic updates
             localMyCompletedDays = newDays
+        }
+        .onAppear {
+            // Initialize local state when view appears
+            localMyCompletedDays = myCompletedDays
         }
         .onChange(of: buddyCompletedDays) { newDays in
             // Sync local state when props update (from server)

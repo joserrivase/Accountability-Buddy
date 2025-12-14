@@ -176,6 +176,7 @@ struct GoalsView: View {
                 await preloadProfileNames()
             }
         }
+        .navigationViewStyle(.stack) // Force stack style on iPad to avoid sidebar
     }
     
     /// Preload all profile names for goals to display them immediately

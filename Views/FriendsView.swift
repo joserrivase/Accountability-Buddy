@@ -76,6 +76,7 @@ struct FriendsView: View {
                 await viewModel.loadFriends()
             }
         }
+        .navigationViewStyle(.stack) // Force stack style on iPad to avoid sidebar
     }
 }
 

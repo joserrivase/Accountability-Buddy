@@ -14,6 +14,8 @@ struct AuthView: View {
     @State private var username = ""
     @State private var fullName = ""
     @State private var isSignUp = false
+    @State private var showingForgotPassword = false
+    @State private var forgotPasswordEmail = ""
     
     var body: some View {
         NavigationView {
@@ -75,6 +77,18 @@ struct AuthView: View {
                     }
                     .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || (isSignUp && (username.isEmpty || fullName.isEmpty)))
                     
+                    // Forgot Password button (only show on sign in)
+                    if !isSignUp {
+                        Button(action: {
+                            showingForgotPassword = true
+                            forgotPasswordEmail = email // Pre-fill with current email if available
+                        }) {
+                            Text("Forgot Password?")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
                     Button(action: {
                         isSignUp.toggle()
                         authViewModel.errorMessage = nil
@@ -94,6 +108,101 @@ struct AuthView: View {
                 Spacer()
             }
             .padding()
+            .sheet(isPresented: $showingForgotPassword) {
+                ForgotPasswordView(
+                    email: $forgotPasswordEmail,
+                    isPresented: $showingForgotPassword,
+                    authViewModel: authViewModel
+                )
+            }
+        }
+    }
+}
+
+// Forgot Password View
+struct ForgotPasswordView: View {
+    @Binding var email: String
+    @Binding var isPresented: Bool
+    @ObservedObject var authViewModel: AuthViewModel
+    @State private var successMessage: String?
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Reset Password")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .padding(.top, 20)
+                
+                Text("Enter your email address and we'll send you instructions to reset your password.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                
+                VStack(spacing: 15) {
+                    TextField("Email", text: $email)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                    
+                    if let successMessage = successMessage {
+                        Text(successMessage)
+                            .foregroundColor(.green)
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    if let errorMessage = authViewModel.errorMessage, successMessage == nil {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    Button(action: {
+                        Task {
+                            await authViewModel.resetPassword(email: email)
+                            if authViewModel.errorMessage?.contains("sent") == true {
+                                successMessage = authViewModel.errorMessage
+                                authViewModel.errorMessage = nil
+                                // Auto-dismiss after 3 seconds
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                    isPresented = false
+                                }
+                            }
+                        }
+                    }) {
+                        HStack {
+                            if authViewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            }
+                            Text("Send Reset Email")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .disabled(authViewModel.isLoading || email.isEmpty)
+                }
+                .padding()
+                
+                Spacer()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        isPresented = false
+                    }
+                }
+            }
         }
     }
 }

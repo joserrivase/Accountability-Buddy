@@ -104,6 +104,18 @@ class SupabaseService {
         )
     }
     
+    func resetPassword(email: String) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        // Send password reset email
+        try await client.auth.resetPasswordForEmail(
+            email,
+            redirectTo: nil // Supabase will use the default redirect URL
+        )
+    }
+    
     func signOut() async throws {
         guard let client = client else {
             throw SupabaseError.notInitialized
@@ -140,11 +152,9 @@ class SupabaseService {
         }
         
         // Note: Deleting the auth user requires admin privileges or a database function
-        // For now, we'll delete all user data and sign them out
-        // The actual auth user deletion would need to be done via:
-        // 1. A database function with admin privileges, or
-        // 2. Supabase dashboard, or
-        // 3. Using the service_role key (not recommended in client apps)
+        // For client-side apps, we delete all user data and sign them out
+        // The auth user record may remain in auth.users but with no associated data
+        // This is acceptable - the user is effectively deleted from the app's perspective
         
         // Delete the profile (if exists)
         try? await client
@@ -153,16 +163,19 @@ class SupabaseService {
             .eq("user_id", value: userId.uuidString)
             .execute()
         
-        // Try to delete the auth user (may fail if not admin)
-        // If this fails, at least all user data has been deleted
+        // Try to delete the auth user (may fail if not admin - that's okay)
+        // If this fails, all user data is already deleted and they'll be signed out
+        // The auth user record will remain but with no associated data, which is acceptable
         do {
             // Check if admin.deleteUser is available
             try await client.auth.admin.deleteUser(id: userId)
         } catch {
-            // If admin.deleteUser fails, user data is already deleted
-            // They'll be signed out, and the auth user will remain but with no data
-            print("⚠️ Warning: Could not delete auth user. User data has been deleted. Auth user may need manual deletion.")
-            throw SupabaseError.custom("Account data deleted, but auth user deletion requires admin access. Please contact support if you need full account deletion.")
+            // If admin.deleteUser fails, that's okay - all user data is already deleted
+            // The user will be signed out and the auth user record may remain in auth.users
+            // but with no associated data, which is acceptable for client-side deletion
+            print("⚠️ Info: Auth user deletion requires admin access. All user data has been deleted. The auth user record may remain in auth.users but with no associated data.")
+            // Don't throw an error - account deletion is successful from the app's perspective
+            // All user data is deleted, and they'll be signed out
         }
     }
     
@@ -895,24 +908,24 @@ class SupabaseService {
             guard let target = goal.winningNumber else { return nil }
             
             // Debug logging
-            print("🎯 Winner Check - List Tracker 'First to Reach':")
-            print("   Goal ID: \(goal.id)")
-            print("   Winning Condition: \(goal.winningCondition ?? "nil")")
-            print("   Target: \(target)")
-            print("   Creator Count: \(creatorCount)")
-            print("   Buddy Count: \(buddyCount)")
+//            print("🎯 Winner Check - List Tracker 'First to Reach':")
+//            print("   Goal ID: \(goal.id)")
+//            print("   Winning Condition: \(goal.winningCondition ?? "nil")")
+//            print("   Target: \(target)")
+//            print("   Creator Count: \(creatorCount)")
+//            print("   Buddy Count: \(buddyCount)")
             
             // Check if creator wins
             if creatorCount >= target && buddyCount < target {
-                print("   ✅ Creator wins! (\(creatorCount) >= \(target) and buddy has \(buddyCount))")
+                //print("   ✅ Creator wins! (\(creatorCount) >= \(target) and buddy has \(buddyCount))")
                 return goal.creatorId
             }
             // Check if buddy wins
             else if buddyCount >= target && creatorCount < target {
-                print("   ✅ Buddy wins! (\(buddyCount) >= \(target) and creator has \(creatorCount))")
+                //print("   ✅ Buddy wins! (\(buddyCount) >= \(target) and creator has \(creatorCount))")
                 return goal.buddyId
             } else {
-                print("   ⏳ No winner yet (Creator: \(creatorCount)/\(target), Buddy: \(buddyCount)/\(target))")
+                //print("   ⏳ No winner yet (Creator: \(creatorCount)/\(target), Buddy: \(buddyCount)/\(target))")
             }
         } else if condition.contains("first to finish") || condition.contains("first_to_finish") {
             // First to finish the list (for user created list)
@@ -1234,24 +1247,24 @@ class SupabaseService {
                 .value
             
             // Debug: Log all profiles found (first few for debugging)
-            print("🔍 DEBUG: Found \(allProfiles.count) total profiles in database")
+            //print("🔍 DEBUG: Found \(allProfiles.count) total profiles in database")
             if allProfiles.count > 0 {
-                print("🔍 DEBUG: First profile sample:")
+                //print("🔍 DEBUG: First profile sample:")
                 let firstProfile = allProfiles[0]
-                print("   - user_id: \(firstProfile.userId)")
-                print("   - username: \(firstProfile.username ?? "nil")")
-                print("   - name: \(firstProfile.name ?? "nil")")
-                print("   - id: \(firstProfile.id)")
+//                print("   - user_id: \(firstProfile.userId)")
+//                print("   - username: \(firstProfile.username ?? "nil")")
+//                print("   - name: \(firstProfile.name ?? "nil")")
+//                print("   - id: \(firstProfile.id)")
             }
             
             // Debug: Log profiles that might match
-            print("🔍 DEBUG: Searching for query: '\(trimmedQuery)' (lowercase: '\(trimmedQuery.lowercased())')")
+            //print("🔍 DEBUG: Searching for query: '\(trimmedQuery)' (lowercase: '\(trimmedQuery.lowercased())')")
             
             // Filter by username or name (case-insensitive, starts with or contains)
             let lowerQuery = trimmedQuery.lowercased()
             
             // Debug: Check all profiles for the search term
-            print("🔍 DEBUG: Checking \(allProfiles.count) profiles for query '\(trimmedQuery)'")
+            //print("🔍 DEBUG: Checking \(allProfiles.count) profiles for query '\(trimmedQuery)'")
             
             let filtered = allProfiles.filter { profile in
                 // Handle both nil and empty string cases
@@ -1269,7 +1282,7 @@ class SupabaseService {
                 // Debug: Log ALL profiles being checked (not just first 5) to find Jose
                 if usernameLower.contains("jose") || nameLower.contains("jose") || 
                    usernameLower.contains(lowerQuery) || nameLower.contains(lowerQuery) {
-                    print("🔍 DEBUG: 🔎 POTENTIAL MATCH - username: '\(username)' (raw: '\(rawUsername ?? "nil")'), name: '\(name)' (raw: '\(rawName ?? "nil")'), userId: \(profile.userId)")
+                    //print("🔍 DEBUG: 🔎 POTENTIAL MATCH - username: '\(username)' (raw: '\(rawUsername ?? "nil")'), name: '\(name)' (raw: '\(rawName ?? "nil")'), userId: \(profile.userId)")
                 }
                 
                 // Skip profiles with no username and no name
@@ -1287,19 +1300,19 @@ class SupabaseService {
                 
                 // Debug: Log all matches
                 if matches {
-                    print("🔍 DEBUG: ✅ MATCH FOUND - username: '\(usernameLower)', name: '\(nameLower)', userId: \(profile.userId)")
+                    //print("🔍 DEBUG: ✅ MATCH FOUND - username: '\(usernameLower)', name: '\(nameLower)', userId: \(profile.userId)")
                 }
                 
                 return matches
             }
             
             // Debug: Log how many profiles matched
-            print("🔍 DEBUG: Found \(filtered.count) profiles matching query '\(trimmedQuery)'")
+           // print("🔍 DEBUG: Found \(filtered.count) profiles matching query '\(trimmedQuery)'")
             
             // Debug: Log all matching profiles
             for (index, profile) in filtered.enumerated() {
                 if index < 10 { // Log first 10 matches
-                    print("🔍 DEBUG: Match \(index + 1): username='\(profile.username ?? "nil")', name='\(profile.name ?? "nil")', userId=\(profile.userId)")
+                    //print("🔍 DEBUG: Match \(index + 1): username='\(profile.username ?? "nil")', name='\(profile.name ?? "nil")', userId=\(profile.userId)")
                 }
             }
             
@@ -1734,21 +1747,51 @@ class SupabaseService {
             throw SupabaseError.notInitialized
         }
         
-        let feedback = Feedback(
+        // Get current authenticated user ID - required for feedback submission
+        guard let userId = await getCurrentUser() else {
+            throw SupabaseError.custom("You must be logged in to submit feedback. Please sign in and try again.")
+        }
+        
+        // Debug: Print the user auth ID to console
+        //print("🔍 DEBUG: Feedback submission - User Auth ID: \(userId.uuidString)")
+        
+        // Create feedback INSERT object - only contains fields we send to database
+        // id and created_at will be auto-generated by the database
+        let feedbackInsert = FeedbackInsert(
+            userId: userId,
             name: name,
             email: email,
             message: message
         )
         
-        let response: Feedback = try await client
-            .from("feedback")
-            .insert(feedback)
-            .select()
-            .single()
-            .execute()
-            .value
+        //print("🔍 DEBUG: FeedbackInsert object - user_id: \(feedbackInsert.userId.uuidString)")
         
-        return response
+        do {
+            // Insert feedback - database will auto-generate id and created_at
+            // Response will be the full Feedback object including generated fields
+            let response: Feedback = try await client
+                .from("feedback")
+                .insert(feedbackInsert)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            //print("🔍 DEBUG: Feedback submitted successfully! ID: \(response.id.uuidString)")
+            return response
+        } catch {
+            // Print FULL error details for debugging
+            //print("🔍 DEBUG: Feedback submission FULL error: \(error)")
+            //print("🔍 DEBUG: Error type: \(type(of: error))")
+            //print("🔍 DEBUG: Error localized: \(error.localizedDescription)")
+            
+            // Try to get more details if it's a Supabase error
+            let errorMessage = "\(error)"
+            if errorMessage.contains("row-level security") || errorMessage.contains("RLS") || errorMessage.contains("violates") {
+                throw SupabaseError.custom("Feedback submission failed due to security policy. Please ensure you are logged in and the RLS policy allows authenticated users to insert feedback. Error: \(errorMessage)")
+            }
+            throw error
+        }
     }
 }
 

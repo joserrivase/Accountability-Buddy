@@ -12,6 +12,7 @@ struct GoalDetailView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @ObservedObject var viewModel: GoalsViewModel
     @State var goalWithProgress: GoalWithProgress
+    @State private var goalUpdateCounter: Int = 0
     
     @State private var myProgress: GoalProgress?
     @State private var buddyProgress: GoalProgress?
@@ -22,6 +23,8 @@ struct GoalDetailView: View {
     @State private var buddyName: String? = nil
     @State private var showQuantityPopup: Bool = false
     @State private var quantityInput: String = ""
+    @State private var selectedDateForQuantity: String? = nil // Date string for which we're entering quantity
+    @State private var isUncompletingDate: Bool = false // Whether we're uncompleting a date (vs completing)
     @State private var showWinnerModal: Bool = false
     @State private var isWinner: Bool = false
     @State private var showEditGoal: Bool = false
@@ -155,6 +158,7 @@ struct GoalDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     goalHeader
+                        .id("goalHeader-\(goalWithProgress.goal.id.uuidString)-\(goalUpdateCounter)")
                     
                     // Input section (only show if goal is not finished for current user)
                     if !isGoalFinishedForCurrentUser {
@@ -179,13 +183,35 @@ struct GoalDetailView: View {
                 QuantityInputPopup(
                     quantityInput: $quantityInput,
                     unit: goalWithProgress.goal.unitTracked,
+                    dateString: selectedDateForQuantity,
+                    requiresQuantity: goalWithProgress.goal.trackDailyQuantity == true,
+                    isUncompleting: isUncompletingDate,
                     onSubmit: {
-                        markTodayCompleteWithQuantity()
+                        if isUncompletingDate, let dateString = selectedDateForQuantity {
+                            // Uncomplete the date
+                            uncompleteDate(dateString: dateString)
+                        } else if let dateString = selectedDateForQuantity {
+                            // For past dates, check if we need quantity or just mark as complete
+                            if goalWithProgress.goal.trackDailyQuantity == true {
+                                markDateCompleteWithQuantity(dateString: dateString)
+                            } else {
+                                markDateComplete(dateString: dateString)
+                            }
+                        } else {
+                            markTodayCompleteWithQuantity()
+                        }
                         showQuantityPopup = false
+                        selectedDateForQuantity = nil
+                        isUncompletingDate = false
                     },
                     onCancel: {
                         quantityInput = ""
                         showQuantityPopup = false
+                        selectedDateForQuantity = nil
+                        isUncompletingDate = false
+                        // Force a refresh of the calendar by triggering a state update
+                        // This ensures the calendar syncs its local state back to the actual state
+                        refreshProgressState()
                     }
                 )
             }
@@ -233,12 +259,14 @@ struct GoalDetailView: View {
             }
         }
         .sheet(isPresented: $showEditGoal, onDismiss: {
-            // When edit sheet is dismissed, refresh the goal data immediately
-            // First, sync with current viewModel.goals (should already be updated)
+            // When edit sheet is dismissed, ensure we have the latest data
+            // The onSave callback should have already updated goalWithProgress,
+            // but we sync again to be absolutely sure we have the latest from viewModel
             syncGoalFromViewModel()
             refreshProgressState()
             
-            // Then reload in background to ensure we have the absolute latest data
+            // Reload in background to ensure we have the absolute latest data
+            // This is a safety net in case onSave didn't fully sync
             Task {
                 await viewModel.loadGoals()
                 await MainActor.run {
@@ -251,12 +279,25 @@ struct GoalDetailView: View {
                 goal: goalWithProgress.goal,
                 viewModel: viewModel,
                 onSave: { updatedGoal in
-                    // Update local state immediately with the refreshed goal
-                    goalWithProgress = GoalWithProgress(
-                        goal: updatedGoal,
-                        creatorProgress: goalWithProgress.creatorProgress,
-                        buddyProgress: goalWithProgress.buddyProgress
-                    )
+                    // Immediately sync from viewModel to get the latest data with progress
+                    // This ensures we have the most up-to-date goal from the database
+                    if let refreshedGoalWithProgress = viewModel.goals.first(where: { $0.goal.id == updatedGoal.id }) {
+                        // Use the full GoalWithProgress from viewModel (includes latest progress)
+                        goalWithProgress = GoalWithProgress(
+                            goal: refreshedGoalWithProgress.goal,
+                            creatorProgress: refreshedGoalWithProgress.creatorProgress,
+                            buddyProgress: refreshedGoalWithProgress.buddyProgress
+                        )
+                    } else {
+                        // Fallback: use the updated goal from callback, keep existing progress
+                        goalWithProgress = GoalWithProgress(
+                            goal: updatedGoal,
+                            creatorProgress: goalWithProgress.creatorProgress,
+                            buddyProgress: goalWithProgress.buddyProgress
+                        )
+                    }
+                    // Force view update by incrementing counter
+                    goalUpdateCounter += 1
                     refreshProgressState()
                 }
             )
@@ -426,7 +467,7 @@ struct GoalDetailView: View {
             
         case .endDateBox:
             if let endDate = goalWithProgress.goal.endDate {
-                EndDateBoxVisual(endDate: endDate, label: "Challenge Ends")
+                EndDateBoxVisual(endDate: endDate, label: nil)
             } else {
                 // Debug: Show message if endDate is missing
                 VStack(alignment: .leading, spacing: 8) {
@@ -504,7 +545,8 @@ struct GoalDetailView: View {
         case .barChart:
             if let myEntries = getDailyQuantityEntries() {
                 let unit = goalWithProgress.goal.unitTracked ?? ""
-                let buddyEntries = getBuddyDailyQuantityEntries()
+                // Only get buddy entries if goal has a buddy (solo goals shouldn't show buddy legend)
+                let buddyEntries = goalWithProgress.goal.buddyId != nil ? getBuddyDailyQuantityEntries() : nil
                 BarChartVisual(
                     myEntries: myEntries,
                     buddyEntries: buddyEntries,
@@ -569,7 +611,8 @@ struct GoalDetailView: View {
                     Button(isTodayCompleted ? "Today Is Completed" : "Mark Today Complete") {
                         if !isTodayCompleted {
                             if goalWithProgress.goal.trackDailyQuantity == true {
-                                // Show quantity popup
+                                // Show quantity popup for today
+                                selectedDateForQuantity = nil // nil means today
                                 quantityInput = ""
                                 showQuantityPopup = true
                             } else {
@@ -864,34 +907,77 @@ struct GoalDetailView: View {
     }
     
     private func markTodayCompleteWithQuantity() {
-        guard let quantity = Double(quantityInput), !quantityInput.isEmpty else { return }
-        guard !isGoalFinishedForCurrentUser else { return } // Don't allow updates if goal is finished
-        
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let today = dateFormatter.string(from: Date())
-        let todayDate = Date()
+        markDateCompleteWithQuantity(dateString: today)
+    }
+    
+    private func markDateComplete(dateString: String) {
+        guard !isGoalFinishedForCurrentUser else { return } // Don't allow updates if goal is finished
         
-        // Mark today as completed if not already
+        // Mark date as completed if not already
         var days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
-        if !days.contains(today) {
-            days.append(today)
+        if !days.contains(dateString) {
+            days.append(dateString)
         }
         
-        // Add quantity entry to list_items (for bar chart)
+        updateMyProgress(completedDays: days)
+        
+        // Check for winner immediately (optimistic) before server sync
+        checkWinnerLocally()
+        
+        Task {
+            await viewModel.updateGoalProgress(
+                goalId: goalWithProgress.goal.id,
+                numericValue: nil,
+                completedDays: days
+            )
+            await viewModel.loadGoals()
+            // Check for winner modal after progress update
+            await checkAndShowWinnerModal()
+        }
+    }
+    
+    private func markDateCompleteWithQuantity(dateString: String) {
+        guard !isGoalFinishedForCurrentUser else { return } // Don't allow updates if goal is finished
+        
+        // If quantity is required, validate it
+        if goalWithProgress.goal.trackDailyQuantity == true {
+            guard let quantity = Double(quantityInput), !quantityInput.isEmpty else { return }
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let date = dateFormatter.date(from: dateString) else { return }
+        
+        // Mark date as completed if not already
+        var days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
+        if !days.contains(dateString) {
+            days.append(dateString)
+        }
+        
+        // Initialize variables for Task block
         var currentItems = myProgress?.listItems ?? myProgressData?.listItems ?? []
-        // Store quantity as title, date as the entry date
-        let quantityItem = GoalListItem(
-            title: String(quantity),
-            date: todayDate
-        )
-        currentItems.append(quantityItem)
-        
-        // Update total quantity
         let currentTotal = myProgress?.numericValue ?? myProgressData?.numericValue ?? 0
-        let newTotal = currentTotal + quantity
+        var newTotal = currentTotal
         
-        updateMyProgress(listItems: currentItems, completedDays: days, numericValue: newTotal)
+        // If tracking quantity, add quantity entry and update total
+        if goalWithProgress.goal.trackDailyQuantity == true, let quantity = Double(quantityInput), !quantityInput.isEmpty {
+            // Store quantity as title, date as the entry date
+            let quantityItem = GoalListItem(
+                title: String(quantity),
+                date: date
+            )
+            currentItems.append(quantityItem)
+            
+            // Update total quantity
+            newTotal = currentTotal + quantity
+            
+            updateMyProgress(listItems: currentItems, completedDays: days, numericValue: newTotal)
+        } else {
+            updateMyProgress(completedDays: days)
+        }
         
         // Clear input
         quantityInput = ""
@@ -902,9 +988,9 @@ struct GoalDetailView: View {
         Task {
             await viewModel.updateGoalProgress(
                 goalId: goalWithProgress.goal.id,
-                numericValue: newTotal,
+                numericValue: goalWithProgress.goal.trackDailyQuantity == true ? newTotal : nil,
                 completedDays: days,
-                listItems: currentItems
+                listItems: goalWithProgress.goal.trackDailyQuantity == true ? currentItems : nil
             )
             await viewModel.loadGoals()
             // Check for winner modal after progress update (server confirmation)
@@ -912,9 +998,106 @@ struct GoalDetailView: View {
         }
     }
     
+    private func uncompleteDate(dateString: String) {
+        guard !isGoalFinishedForCurrentUser else { return } // Don't allow updates if goal is finished
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let date = dateFormatter.date(from: dateString) else { return }
+        
+        // Remove date from completedDays
+        var days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
+        if let index = days.firstIndex(of: dateString) {
+            days.remove(at: index)
+        }
+        
+        // If tracking quantity, remove the quantity entry for this date
+        var currentItems = myProgress?.listItems ?? myProgressData?.listItems ?? []
+        var newTotal = myProgress?.numericValue ?? myProgressData?.numericValue ?? 0
+        
+        if goalWithProgress.goal.trackDailyQuantity == true {
+            // Find and remove quantity entries for this date
+            var itemsToRemove: [GoalListItem] = []
+            var quantityToSubtract: Double = 0
+            
+            for item in currentItems {
+                let itemDateString = dateFormatter.string(from: item.date)
+                if itemDateString == dateString {
+                    itemsToRemove.append(item)
+                    // Try to parse the quantity from the item title
+                    if let quantity = Double(item.title) {
+                        quantityToSubtract += quantity
+                    }
+                }
+            }
+            
+            // Remove the items
+            currentItems.removeAll { item in
+                itemsToRemove.contains(where: { $0.id == item.id })
+            }
+            
+            // Update total quantity
+            newTotal = max(0, newTotal - quantityToSubtract)
+            
+            updateMyProgress(listItems: currentItems, completedDays: days, numericValue: newTotal)
+        } else {
+            updateMyProgress(completedDays: days)
+        }
+        
+        // Check for winner immediately (optimistic) before server sync
+        checkWinnerLocally()
+        
+        Task {
+            await viewModel.updateGoalProgress(
+                goalId: goalWithProgress.goal.id,
+                numericValue: goalWithProgress.goal.trackDailyQuantity == true ? newTotal : nil,
+                completedDays: days,
+                listItems: goalWithProgress.goal.trackDailyQuantity == true ? currentItems : nil
+            )
+            await viewModel.loadGoals()
+            // Check for winner modal after progress update
+            await checkAndShowWinnerModal()
+        }
+    }
+    
     private func toggleDayCompletion(dateString: String) {
         guard !isGoalFinishedForCurrentUser else { return } // Don't allow updates if goal is finished
         
+        // Check if this is a daily tracker goal
+        if goalWithProgress.goal.goalType == "daily_tracker" {
+            // Check if date is in the past (not today or future)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            guard let date = dateFormatter.date(from: dateString) else { return }
+            
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let selectedDate = calendar.startOfDay(for: date)
+            
+            // If date is in the past, show confirmation popup (for both completing and uncompleting)
+            if selectedDate < today {
+                let days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
+                let isAlreadyCompleted = days.contains(dateString)
+                
+                if isAlreadyCompleted {
+                    // Show confirmation popup for uncompleting
+                    selectedDateForQuantity = dateString
+                    quantityInput = ""
+                    isUncompletingDate = true
+                    showQuantityPopup = true
+                    return
+                } else {
+                    // Show popup for past date (confirmation with optional quantity input)
+                    selectedDateForQuantity = dateString
+                    quantityInput = ""
+                    isUncompletingDate = false
+                    showQuantityPopup = true
+                    return
+                }
+            }
+        }
+        
+        // Default behavior: toggle completion (for non-daily-tracker or today/future dates)
         var days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
         if let index = days.firstIndex(of: dateString) {
             days.remove(at: index)
@@ -1019,6 +1202,8 @@ struct GoalDetailView: View {
             // Only update if something actually changed to avoid unnecessary view updates
             // But always update to ensure SwiftUI detects property changes
             goalWithProgress = newGoalWithProgress
+            // Force view update by incrementing counter
+            goalUpdateCounter += 1
         }
     }
     
@@ -1395,9 +1580,24 @@ struct GoalDetailView: View {
 struct QuantityInputPopup: View {
     @Binding var quantityInput: String
     let unit: String?
+    let dateString: String? // Optional date string to display
+    let requiresQuantity: Bool // Whether quantity input is required
+    let isUncompleting: Bool // Whether we're uncompleting a date
     let onSubmit: () -> Void
     let onCancel: () -> Void
     @FocusState private var isTextFieldFocused: Bool
+    
+    private var formattedDate: String? {
+        guard let dateString = dateString else { return nil }
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        guard let date = dateFormatter.date(from: dateString) else { return dateString }
+        
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .medium
+        displayFormatter.timeStyle = .none
+        return displayFormatter.string(from: date)
+    }
     
     var body: some View {
         ZStack {
@@ -1410,49 +1610,64 @@ struct QuantityInputPopup: View {
             
             // Popup content - styled like native iOS alert
             VStack(spacing: 0) {
-                // Title
-                Text("Enter Quantity")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .padding(.top, 20)
-                    .padding(.horizontal, 16)
-                
-                // Message
-                if let unit = unit {
-                    Text("Enter the quantity in \(unit)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                // Title - different for confirmation vs quantity entry
+                if dateString != nil {
+                    // Confirmation popup for past dates
+                    Text(isUncompleting ? "Are you sure you want to mark \(formattedDate ?? "this date") as uncompleted?" : "Are you sure you want to mark \(formattedDate ?? "this date") as completed?")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
                         .multilineTextAlignment(.center)
-                        .padding(.top, 8)
+                        .padding(.top, 20)
+                        .padding(.horizontal, 16)
+                } else {
+                    // Quantity entry for today
+                    Text("Enter Quantity")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .padding(.top, 20)
                         .padding(.horizontal, 16)
                 }
                 
-                // Text field
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Quantity")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    HStack {
-                        TextField("", text: $quantityInput)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.plain)
-                            .focused($isTextFieldFocused)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(8)
-                        
-                        if let unit = unit {
-                            Text(unit)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 4)
+                // Quantity input section (only show if required and not uncompleting)
+                if requiresQuantity && !isUncompleting {
+                    // Message
+                    if let unit = unit {
+                        Text("Enter the quantity in \(unit)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 8)
+                            .padding(.horizontal, 16)
+                    }
+                    
+                    // Text field
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Quantity")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        HStack {
+                            TextField("", text: $quantityInput)
+                                .keyboardType(.decimalPad)
+                                .textFieldStyle(.plain)
+                                .focused($isTextFieldFocused)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 8)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                            
+                            if let unit = unit {
+                                Text(unit)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                    .padding(.leading, 4)
+                            }
                         }
                     }
+                    .padding(.top, 16)
+                    .padding(.horizontal, 16)
                 }
-                .padding(.top, 16)
-                .padding(.horizontal, 16)
                 
                 // Buttons
                 Divider()
@@ -1475,14 +1690,14 @@ struct QuantityInputPopup: View {
                     Button(action: {
                         onSubmit()
                     }) {
-                        Text("Submit")
+                        Text("Confirm")
                             .font(.body)
                             .fontWeight(.semibold)
-                            .foregroundColor(quantityInput.isEmpty ? .gray : .blue)
+                            .foregroundColor((requiresQuantity && !isUncompleting && quantityInput.isEmpty) ? .gray : .blue)
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                     }
-                    .disabled(quantityInput.isEmpty)
+                    .disabled(requiresQuantity && !isUncompleting && quantityInput.isEmpty)
                 }
             }
             .background(Color(.systemBackground))

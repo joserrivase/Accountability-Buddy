@@ -472,6 +472,8 @@
 				DEVELOPMENT_TEAM = DNG3MKZ6T9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "\"We need access to save your profile picture to your photo library.\"";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "\"We need access to your photo library to let you select a profile picture.\"";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -500,6 +502,8 @@
 				DEVELOPMENT_TEAM = DNG3MKZ6T9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "\"We need access to save your profile picture to your photo library.\"";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "\"We need access to your photo library to let you select a profile picture.\"";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

@@ -106,6 +106,13 @@ struct SettingsView: View {
                     profileViewModel.setUserId(userId)
                 }
             }
+            .onChange(of: authViewModel.isAuthenticated) { isAuthenticated in
+                // When user is signed out (either via logout or account deletion),
+                // dismiss this settings sheet so ContentView can show AuthView
+                if !isAuthenticated {
+                    dismiss()
+                }
+            }
         }
     }
     
@@ -121,15 +128,28 @@ struct SettingsView: View {
             // Then delete the account
             try await SupabaseService.shared.deleteAccount(userId: userId)
             
-            // Sign out and dismiss
+            // Sign out - this will set isAuthenticated = false and currentUserId = nil
             await authViewModel.signOut()
-            dismiss()
+            
+            // Explicitly ensure state is cleared on main thread
+            await MainActor.run {
+                authViewModel.isAuthenticated = false
+                authViewModel.currentUserId = nil
+            }
+            
+            // Small delay to ensure state change propagates
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+            
+            // Explicitly dismiss the sheet - this ensures navigation happens
+            // ContentView will see isAuthenticated = false and show AuthView
+            await MainActor.run {
+                dismiss()
+            }
         } catch {
             print("Error deleting account: \(error)")
             authViewModel.errorMessage = "Failed to delete account: \(error.localizedDescription)"
+            isDeleting = false
         }
-        
-        isDeleting = false
     }
     
     private func deleteUserData(userId: UUID) async throws {
