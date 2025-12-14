@@ -9,6 +9,7 @@ import Foundation
 
 enum NotificationType: String, Codable {
     case friendRequest = "friend_request"
+    case friendRequestAccepted = "friend_request_accepted"
     case goalUpdate = "goal_update"
 }
 

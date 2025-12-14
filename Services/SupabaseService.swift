@@ -638,40 +638,44 @@ class SupabaseService {
                 .eq("id", value: existingProgress.id.uuidString)
                 .select()
                 .single()
-                .execute()
-                .value
+            .execute()
+            .value
             
             // Create notification for buddy if goal has a buddy
             if let buddyId = goal.buddyId, buddyId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
+                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
                     let notification = AppNotification(
                         id: UUID(),
                         userId: buddyId,
                         type: .goalUpdate,
                         title: "Goal Update",
-                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        message: "\(updaterName) updated progress on \"\(goal.name)\"",
                         relatedUserId: userId,
                         relatedGoalId: goalId,
                         isRead: false
                     )
                     _ = try? await createNotification(notification: notification)
+                    // Local notification will be triggered when the buddy's app loads this notification
                 }
             }
             
             // Also notify creator if user is the buddy
             if goal.creatorId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
+                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
                     let notification = AppNotification(
                         id: UUID(),
                         userId: goal.creatorId,
                         type: .goalUpdate,
                         title: "Goal Update",
-                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        message: "\(updaterName) updated progress on \"\(goal.name)\"",
                         relatedUserId: userId,
                         relatedGoalId: goalId,
                         isRead: false
                     )
                     _ = try? await createNotification(notification: notification)
+                    // Local notification will be triggered when the creator's app loads this notification
                 }
             }
             
@@ -699,38 +703,42 @@ class SupabaseService {
             .single()
             .execute()
             .value
-        
+            
             // Create notification for buddy if goal has a buddy
             if let buddyId = goal.buddyId, buddyId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
+                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
                     let notification = AppNotification(
                         id: UUID(),
                         userId: buddyId,
                         type: .goalUpdate,
                         title: "Goal Update",
-                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        message: "\(updaterName) updated progress on \"\(goal.name)\"",
                         relatedUserId: userId,
                         relatedGoalId: goalId,
                         isRead: false
                     )
                     _ = try? await createNotification(notification: notification)
+                    // Local notification will be triggered when the buddy's app loads this notification
                 }
             }
             
             // Also notify creator if user is the buddy
             if goal.creatorId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
+                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
                     let notification = AppNotification(
                         id: UUID(),
                         userId: goal.creatorId,
                         type: .goalUpdate,
                         title: "Goal Update",
-                        message: "\(userProfile.name ?? userProfile.username ?? "Your buddy") updated progress on \"\(goal.name)\"",
+                        message: "\(updaterName) updated progress on \"\(goal.name)\"",
                         relatedUserId: userId,
                         relatedGoalId: goalId,
                         isRead: false
                     )
                     _ = try? await createNotification(notification: notification)
+                    // Local notification will be triggered when the creator's app loads this notification
                 }
             }
             
@@ -738,8 +746,8 @@ class SupabaseService {
             if goal.challengeOrFriendly == "challenge" {
                 try? await checkAndDetermineWinner(goalId: goalId)
             }
-        
-        return response
+            
+            return response
         }
     }
     
@@ -853,39 +861,37 @@ class SupabaseService {
             
             print("   ✅ Goal status updated to: \(updatedGoal.goalStatus?.rawValue ?? "nil")")
             
-            // Send notifications to both users
-            let winnerProfile = try? await fetchProfile(userId: winnerId)
-            let loserProfile = try? await fetchProfile(userId: loserId)
-            
-            // Notify winner
-            if let winnerName = winnerProfile?.name ?? winnerProfile?.username {
-                let winnerNotification = AppNotification(
-                    id: UUID(),
-                    userId: winnerId,
-                    type: .goalUpdate,
-                    title: "Goal Completed!",
-                    message: "You won the \"\(goal.name)\" goal!",
-                    relatedUserId: nil,
-                    relatedGoalId: goalId,
-                    isRead: false
-                )
-                _ = try? await createNotification(notification: winnerNotification)
-            }
+            // Send notifications to both users with same message (don't reveal who won)
+            // Send same message to both users so winner isn't revealed in notification
+            let completionMessage = "The \"\(goal.name)\" goal has been completed. Check it to see the results!"
             
             // Notify loser
-            if let loserName = loserProfile?.name ?? loserProfile?.username {
-                let loserNotification = AppNotification(
-                    id: UUID(),
-                    userId: loserId,
-                    type: .goalUpdate,
-                    title: "Goal Completed",
-                    message: "The \"\(goal.name)\" goal has been completed. Check it to see the results!",
-                    relatedUserId: nil,
-                    relatedGoalId: goalId,
-                    isRead: false
-                )
-                _ = try? await createNotification(notification: loserNotification)
-            }
+            let loserNotification = AppNotification(
+                id: UUID(),
+                userId: loserId,
+                type: .goalUpdate,
+                title: "Goal Completed",
+                message: completionMessage,
+                relatedUserId: nil,
+                relatedGoalId: goalId,
+                isRead: false
+            )
+            _ = try? await createNotification(notification: loserNotification)
+            // Local notification will be triggered when the loser's app loads this notification
+            
+            // Also notify winner with same message (not revealing they won)
+            let winnerNotification = AppNotification(
+                id: UUID(),
+                userId: winnerId,
+                type: .goalUpdate,
+                title: "Goal Completed",
+                message: completionMessage,
+                relatedUserId: nil,
+                relatedGoalId: goalId,
+                isRead: false
+            )
+            _ = try? await createNotification(notification: winnerNotification)
+            // Local notification will be triggered when the winner's app loads this notification
         }
     }
     
@@ -1462,16 +1468,18 @@ class SupabaseService {
         
         // Create notification for the recipient
         if let fromProfile = try? await fetchProfile(userId: fromUserId) {
+            let senderName = fromProfile.name ?? fromProfile.username ?? "Someone"
             let notification = AppNotification(
                 id: UUID(),
                 userId: toUserId,
                 type: .friendRequest,
                 title: "New Friend Request",
-                message: "\(fromProfile.name ?? fromProfile.username ?? "Someone") wants to be your friend",
+                message: "\(senderName) wants to be your friend",
                 relatedUserId: fromUserId,
                 isRead: false
             )
             _ = try? await createNotification(notification: notification)
+            // Local notification will be triggered when the recipient's app loads this notification
         }
         
         return response
@@ -1509,6 +1517,24 @@ class SupabaseService {
             .single()
             .execute()
             .value
+        
+        // Create notification for the person who sent the request
+        // The person accepting is the one who received the original request
+        // So we need to notify the original sender (user_id in the friendship)
+        if let accepterProfile = try? await fetchProfile(userId: response.friendId) {
+            let accepterName = accepterProfile.name ?? accepterProfile.username ?? "Someone"
+            let notification = AppNotification(
+                id: UUID(),
+                userId: response.userId, // Original sender
+                type: .friendRequestAccepted,
+                title: "Friend Request Accepted",
+                message: "\(accepterName) accepted your friend request",
+                relatedUserId: response.friendId,
+                isRead: false
+            )
+            _ = try? await createNotification(notification: notification)
+            // Local notification will be triggered when the sender's app loads this notification
+        }
         
         return response
     }

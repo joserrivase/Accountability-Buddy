@@ -248,6 +248,9 @@ struct GoalReviewView: View {
         // Determine buddy ID
         let buddyId: UUID? = flowEngine.answers.isSolo == true ? nil : flowEngine.answers.buddyId
         
+        // Check if this is the user's first goal (before creating)
+        let isFirstGoal = goalsViewModel.goals.isEmpty
+        
         // Create the goal with all questionnaire answers
         await goalsViewModel.createGoal(
             name: goalName,
@@ -257,12 +260,35 @@ struct GoalReviewView: View {
         )
         
         if goalsViewModel.errorMessage == nil {
+            // Request notification permission after first goal creation
+            if isFirstGoal {
+                await requestNotificationPermission()
+            }
             onDismiss()
         } else {
             errorMessage = goalsViewModel.errorMessage
         }
         
         isCreating = false
+    }
+    
+    private func requestNotificationPermission() async {
+        let status = await NotificationService.shared.checkAuthorizationStatus()
+        
+        // Only request if not already determined
+        if status == .notDetermined {
+            // Request permission - iOS will show the system permission dialog
+            // The user will see: "Accountability Buddy" Would Like to Send You Notifications
+            // with options: Don't Allow / Allow
+            let granted = await NotificationService.shared.requestAuthorization()
+            if granted {
+                print("✅ Notification permission granted")
+            } else {
+                print("⚠️ Notification permission denied")
+            }
+        } else if status == .denied {
+            print("⚠️ Notification permission was previously denied")
+        }
     }
 }
 
