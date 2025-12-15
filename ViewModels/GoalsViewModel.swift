@@ -33,21 +33,35 @@ class GoalsViewModel: ObservableObject {
         do {
             let fetchedGoals = try await supabaseService.fetchGoals(userId: userId)
             
-            // Fetch progress for each goal
+            // Fetch progress for ALL goals in parallel (not sequential)
             var goalsWithProgress: [GoalWithProgress] = []
             
-            for goal in fetchedGoals {
-                let progressList = try await supabaseService.fetchGoalProgress(goalId: goal.id)
+            await withTaskGroup(of: (Goal, GoalProgress?, GoalProgress?).self) { group in
+                // Add all tasks to the group
+                for goal in fetchedGoals {
+                    group.addTask {
+                        // Fetch progress for this goal
+                        let progressList = try? await self.supabaseService.fetchGoalProgress(goalId: goal.id)
+                        
+                        let creatorProgress = progressList?.first { $0.userId == goal.creatorId }
+                        let buddyProgress = goal.buddyId != nil ? progressList?.first { $0.userId == goal.buddyId } : nil
+                        
+                        return (goal, creatorProgress, buddyProgress)
+                    }
+                }
                 
-                let creatorProgress = progressList.first { $0.userId == goal.creatorId }
-                let buddyProgress = goal.buddyId != nil ? progressList.first { $0.userId == goal.buddyId } : nil
-                
-                goalsWithProgress.append(GoalWithProgress(
-                    goal: goal,
-                    creatorProgress: creatorProgress,
-                    buddyProgress: buddyProgress
-                ))
+                // Collect results as they complete
+                for await (goal, creatorProgress, buddyProgress) in group {
+                    goalsWithProgress.append(GoalWithProgress(
+                        goal: goal,
+                        creatorProgress: creatorProgress,
+                        buddyProgress: buddyProgress
+                    ))
+                }
             }
+            
+            // Sort by updated_at to maintain order
+            goalsWithProgress.sort { $0.goal.updatedAt > $1.goal.updatedAt }
             
             goals = goalsWithProgress
         } catch {

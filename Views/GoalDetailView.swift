@@ -650,7 +650,13 @@ struct GoalDetailView: View {
                                 goalId: goalWithProgress.goal.id,
                                 numericValue: value
                             )
+                            // Small delay to ensure DB update is committed before reloading
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                             await viewModel.loadGoals()
+                            await MainActor.run {
+                                syncGoalFromViewModel()
+                                refreshProgressState()
+                            }
                             // Check for winner modal after progress update
                             await checkAndShowWinnerModal()
                         }
@@ -839,7 +845,13 @@ struct GoalDetailView: View {
                 goalId: goalWithProgress.goal.id,
                 listItems: currentItems
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update (server confirmation)
             await checkAndShowWinnerModal()
         }
@@ -872,7 +884,13 @@ struct GoalDetailView: View {
                 goalId: goalWithProgress.goal.id,
                 listItems: currentItems
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update (server confirmation)
             await checkAndShowWinnerModal()
         }
@@ -899,7 +917,13 @@ struct GoalDetailView: View {
                     numericValue: nil,
                     completedDays: days
                 )
+                // Small delay to ensure DB update is committed before reloading
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                 await viewModel.loadGoals()
+                await MainActor.run {
+                    syncGoalFromViewModel()
+                    refreshProgressState()
+                }
                 // Check for winner modal after progress update (server confirmation)
                 await checkAndShowWinnerModal()
             }
@@ -933,7 +957,13 @@ struct GoalDetailView: View {
                 numericValue: nil,
                 completedDays: days
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update
             await checkAndShowWinnerModal()
         }
@@ -992,7 +1022,13 @@ struct GoalDetailView: View {
                 completedDays: days,
                 listItems: goalWithProgress.goal.trackDailyQuantity == true ? currentItems : nil
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update (server confirmation)
             await checkAndShowWinnerModal()
         }
@@ -1054,7 +1090,13 @@ struct GoalDetailView: View {
                 completedDays: days,
                 listItems: goalWithProgress.goal.trackDailyQuantity == true ? currentItems : nil
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update
             await checkAndShowWinnerModal()
         }
@@ -1112,7 +1154,13 @@ struct GoalDetailView: View {
                 numericValue: nil,
                 completedDays: days
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update
             await checkAndShowWinnerModal()
         }
@@ -1153,7 +1201,13 @@ struct GoalDetailView: View {
                 completedDays: days,
                 listItems: currentItems
             )
+            // Small delay to ensure DB update is committed before reloading
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             await viewModel.loadGoals()
+            await MainActor.run {
+                syncGoalFromViewModel()
+                refreshProgressState()
+            }
             // Check for winner modal after progress update
             await checkAndShowWinnerModal()
         }
