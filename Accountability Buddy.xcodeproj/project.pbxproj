@@ -18,6 +18,7 @@
 		D4F50AA22EC14E76009DA2C1 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D4F50AA12EC14E76009DA2C1 /* Supabase */; };
 		D4F50AB52EC17A4C009DA2C1 /* FRIENDS_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50AB32EC17A4C009DA2C1 /* FRIENDS_SETUP.md */; };
 		D4F50AB62EC17A4C009DA2C1 /* PROFILE_SETUP.md in Resources */ = {isa = PBXBuildFile; fileRef = D4F50AB42EC17A4C009DA2C1 /* PROFILE_SETUP.md */; };
+		D4F6253A2EEFA3CF0093E3C0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D4F625392EEFA3CF0093E3C0 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +47,7 @@
 		D4F50A942EC14C81009DA2C1 /* SUUPABASE_CREDENTIALS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SUUPABASE_CREDENTIALS.md; sourceTree = "<group>"; };
 		D4F50AB32EC17A4C009DA2C1 /* FRIENDS_SETUP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = FRIENDS_SETUP.md; sourceTree = "<group>"; };
 		D4F50AB42EC17A4C009DA2C1 /* PROFILE_SETUP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PROFILE_SETUP.md; sourceTree = "<group>"; };
+		D4F625392EEFA3CF0093E3C0 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -123,6 +125,7 @@
 				D4F50AB32EC17A4C009DA2C1 /* FRIENDS_SETUP.md */,
 				D4F50AB42EC17A4C009DA2C1 /* PROFILE_SETUP.md */,
 				D4F50A902EC14C46009DA2C1 /* SETUP.md */,
+				D4F625392EEFA3CF0093E3C0 /* LaunchScreen.storyboard */,
 				D4F50A942EC14C81009DA2C1 /* SUUPABASE_CREDENTIALS.md */,
 				D4F50A8E2EC14C26009DA2C1 /* README.md */,
 				D4F50A842EBFD75B009DA2C1 /* Views */,
@@ -283,6 +286,7 @@
 				D4F50A952EC14C8A009DA2C1 /* SUUPABASE_CREDENTIALS.md in Resources */,
 				D4F50A8F2EC14C2E009DA2C1 /* README.md in Resources */,
 				D4F50AB52EC17A4C009DA2C1 /* FRIENDS_SETUP.md in Resources */,
+				D4F6253A2EEFA3CF0093E3C0 /* LaunchScreen.storyboard in Resources */,
 				D4F50AB62EC17A4C009DA2C1 /* PROFILE_SETUP.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -480,6 +484,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -514,6 +519,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

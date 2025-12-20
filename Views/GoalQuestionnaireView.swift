@@ -64,7 +64,7 @@ struct GoalQuestionnaireView: View {
                             Button(action: {
                                 handleAnswer()
                             }) {
-                                Text(flowEngine.getNextQuestion() == nil ? "Review" : "Next")
+                                Text("Next")
                                     .fontWeight(.semibold)
                                     .frame(maxWidth: .infinity)
                                     .padding()
