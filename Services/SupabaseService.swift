@@ -36,7 +36,7 @@ class SupabaseService {
     
     // MARK: - Authentication
     
-    func signUp(email: String, password: String, username: String, fullName: String) async throws {
+    func signUp(email: String, password: String, username: String, firstName: String, lastName: String) async throws {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
@@ -56,12 +56,12 @@ class SupabaseService {
             
             let userId = response.user.id
             
-            // Create profile with username and name if user is authenticated (has session)
+            // Create profile with username, first_name, and last_name if user is authenticated (has session)
             // If no session, profile will be created after email confirmation
             if response.session != nil {
                 // User is automatically signed in, create profile now
                 do {
-                    _ = try await createProfile(userId: userId, username: username, name: fullName)
+                    _ = try await createProfile(userId: userId, username: username, firstName: firstName, lastName: lastName)
                 } catch {
                     // Log error but don't fail signup if profile creation fails
                     print("⚠️ Warning: Failed to create profile during signup: \(error)")
@@ -72,7 +72,7 @@ class SupabaseService {
                 // Or we can wait until they sign in for the first time
                 // Let's create it with the provided info - if user doesn't exist yet, it will fail gracefully
                 do {
-                    _ = try await createProfile(userId: userId, username: username, name: fullName)
+                    _ = try await createProfile(userId: userId, username: username, firstName: firstName, lastName: lastName)
                 } catch {
                     // If profile creation fails (e.g., user not fully created yet), that's okay
                     // Profile will be created when they first sign in after email confirmation
@@ -219,16 +219,131 @@ class SupabaseService {
         return response.first
     }
     
-    func createProfile(userId: UUID, username: String? = nil, name: String? = nil, profileImageUrl: String? = nil) async throws -> Profile {
+    func checkUsernameAvailability(username: String) async -> Bool {
+        guard let client = client else { 
+            print("❌ checkUsernameAvailability: Client not initialized")
+            return false 
+        }
+        
+        // Normalize username for case-insensitive comparison
+        let trimmedUsername = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedUsername.isEmpty else { 
+            print("❌ checkUsernameAvailability: Username is empty")
+            return false 
+        }
+        
+        let normalizedUsername = trimmedUsername.lowercased()
+        
+        do {
+            // Try to query profiles - this will fail if RLS blocks unauthenticated access
+            // We'll catch the error and provide guidance
+            print("🔍 checkUsernameAvailability: Attempting to query profiles for username '\(trimmedUsername)'")
+            
+            // First, try exact match (case-sensitive) - this is faster
+            let exactMatchProfiles: [Profile] = try await client
+                .from("profiles")
+                .select()
+                .eq("username", value: trimmedUsername)
+                .limit(1)
+                .execute()
+                .value
+            
+            print("🔍 checkUsernameAvailability: Exact match query returned \(exactMatchProfiles.count) profiles")
+            
+            if !exactMatchProfiles.isEmpty {
+                print("✅ checkUsernameAvailability: Found exact match for username '\(trimmedUsername)'")
+                return false // Username is taken
+            }
+            
+            // If no exact match, fetch all profiles with usernames and check case-insensitively
+            // This handles case variations like "JohnDoe" vs "johndoe"
+            // Note: We fetch all profiles and filter client-side since Supabase Swift SDK
+            // doesn't easily support case-insensitive queries or filtering for non-null
+            let allProfiles: [Profile] = try await client
+                .from("profiles")
+                .select()
+                .limit(5000) // Increased limit to catch more usernames
+                .execute()
+                .value
+            
+            print("🔍 checkUsernameAvailability: Fetched \(allProfiles.count) total profiles from database")
+            
+            // Filter to only profiles with non-null, non-empty usernames
+            let profilesWithUsernames = allProfiles.filter { profile in
+                guard let username = profile.username else { return false }
+                return !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            
+            print("🔍 checkUsernameAvailability: Found \(profilesWithUsernames.count) profiles with usernames")
+            print("🔍 checkUsernameAvailability: Checking for '\(trimmedUsername)' (normalized: '\(normalizedUsername)')")
+            
+            // Check if any profile has a matching username (case-insensitive)
+            let isTaken = profilesWithUsernames.contains { profile in
+                guard let existingUsername = profile.username else { return false }
+                let existingNormalized = existingUsername.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let matches = existingNormalized == normalizedUsername
+                
+                if matches {
+                    print("✅ checkUsernameAvailability: Found case-insensitive match - existing: '\(existingUsername)' matches '\(trimmedUsername)'")
+                }
+                
+                return matches
+            }
+            
+            if isTaken {
+                print("❌ checkUsernameAvailability: Username '\(trimmedUsername)' is already taken")
+                return false // Username is taken
+            } else {
+                print("✅ checkUsernameAvailability: Username '\(trimmedUsername)' is available")
+                return true // Username is available
+            }
+        } catch {
+            // If there's an error, it's likely due to RLS blocking unauthenticated access
+            print("❌ Error checking username availability for '\(trimmedUsername)': \(error)")
+            print("❌ Error details: \(error.localizedDescription)")
+            print("❌ This is likely due to RLS policies blocking unauthenticated reads.")
+            print("❌ You need to add an RLS policy that allows reading usernames for availability checking.")
+            print("❌ Run this SQL in Supabase to fix it:")
+            print("""
+            CREATE POLICY "Allow username availability check"
+                ON profiles FOR SELECT
+                TO public
+                USING (true);
+            """)
+            // Return false to be safe (assume username is taken if we can't check)
+            return false
+        }
+    }
+    
+    func createProfile(userId: UUID, username: String? = nil, name: String? = nil, firstName: String? = nil, lastName: String? = nil, profileImageUrl: String? = nil) async throws -> Profile {
         guard let client = client else {
             throw SupabaseError.notInitialized
+        }
+        
+        // If name is provided but firstName/lastName are not, split name for backward compatibility
+        let finalFirstName: String?
+        let finalLastName: String?
+        if let name = name, !name.isEmpty, firstName == nil, lastName == nil {
+            let nameComponents = name.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: " ")
+            if nameComponents.count > 1 {
+                finalFirstName = nameComponents[0]
+                finalLastName = nameComponents.dropFirst().joined(separator: " ")
+            } else {
+                finalFirstName = name
+                finalLastName = nil
+            }
+        } else {
+            finalFirstName = firstName
+            finalLastName = lastName
         }
         
         let newProfile = Profile(
             id: UUID(),
             userId: userId,
             username: username,
-            name: name,
+            name: name, // Keep for backward compatibility
+            firstName: finalFirstName,
+            lastName: finalLastName,
             profileImageUrl: profileImageUrl
         )
         
@@ -243,7 +358,7 @@ class SupabaseService {
         return response
     }
     
-    func updateProfile(userId: UUID, username: String? = nil, name: String? = nil, profileImageUrl: String? = nil) async throws -> Profile {
+    func updateProfile(userId: UUID, username: String? = nil, name: String? = nil, firstName: String? = nil, lastName: String? = nil, profileImageUrl: String? = nil) async throws -> Profile {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
@@ -251,7 +366,9 @@ class SupabaseService {
         // Create update payload with only the fields to update
         let updateData = ProfileUpdate(
             username: username,
-            name: name,
+            name: name, // Keep for backward compatibility
+            firstName: firstName,
+            lastName: lastName,
             profileImageUrl: profileImageUrl
         )
         
@@ -268,7 +385,7 @@ class SupabaseService {
             return updatedProfile
         } else {
             // Profile doesn't exist, create it
-            return try await createProfile(userId: userId, username: username, name: name, profileImageUrl: profileImageUrl)
+            return try await createProfile(userId: userId, username: username, name: name, firstName: firstName, lastName: lastName, profileImageUrl: profileImageUrl)
         }
     }
     
@@ -337,11 +454,11 @@ class SupabaseService {
             }
         }
         
-        // Sort by updated_at descending
-        return allGoals.sorted { $0.updatedAt > $1.updatedAt }
+        // Sort by created_at descending (newest first, oldest at bottom)
+        return allGoals.sorted { $0.createdAt > $1.createdAt }
     }
     
-    func createGoal(name: String, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID?, goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil) async throws -> Goal {
+    func createGoal(name: String, description: String? = nil, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID?, goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil) async throws -> Goal {
         guard let client = client else {
             throw SupabaseError.notInitialized
         }
@@ -349,6 +466,7 @@ class SupabaseService {
         let newGoal = Goal(
             id: UUID(),
             name: name,
+            description: description,
             trackingMethod: trackingMethod,
             creatorId: creatorId,
             buddyId: buddyId,
@@ -425,6 +543,7 @@ class SupabaseService {
     func updateGoal(
         goalId: UUID,
         name: String? = nil,
+        description: String? = nil,
         buddyId: UUID? = nil,
         taskBeingTracked: String? = nil,
         listItems: [String]? = nil,
@@ -443,6 +562,7 @@ class SupabaseService {
         
         struct GoalUpdate: Codable {
             var name: String?
+            var description: String?
             var taskBeingTracked: String?
             var listItems: [String]?
             var keepStreak: Bool?
@@ -457,6 +577,7 @@ class SupabaseService {
             
             enum CodingKeys: String, CodingKey {
                 case name
+                case description
                 case taskBeingTracked = "task_being_tracked"
                 case listItems = "list_items"
                 case keepStreak = "keep_streak"
@@ -476,6 +597,7 @@ class SupabaseService {
                 
                 // Only encode non-nil values
                 if let name = name { try container.encode(name, forKey: .name) }
+                if let description = description { try container.encode(description, forKey: .description) }
                 if let taskBeingTracked = taskBeingTracked { try container.encode(taskBeingTracked, forKey: .taskBeingTracked) }
                 if let listItems = listItems { try container.encode(listItems, forKey: .listItems) }
                 if let keepStreak = keepStreak { try container.encode(keepStreak, forKey: .keepStreak) }
@@ -497,6 +619,7 @@ class SupabaseService {
         // Create update struct with all values (nil values will be handled by custom encoding)
         var updateData = GoalUpdate(
             name: name,
+            description: description,
             taskBeingTracked: taskBeingTracked,
             listItems: listItems,
             keepStreak: keepStreak,
@@ -644,7 +767,7 @@ class SupabaseService {
             // Create notification for buddy if goal has a buddy
             if let buddyId = goal.buddyId, buddyId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
-                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
+                    let updaterName = userProfile.displayName != "User" ? userProfile.displayName : (userProfile.username ?? "Your buddy")
                     let notification = AppNotification(
                         id: UUID(),
                         userId: buddyId,
@@ -663,7 +786,7 @@ class SupabaseService {
             // Also notify creator if user is the buddy
             if goal.creatorId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
-                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
+                    let updaterName = userProfile.displayName != "User" ? userProfile.displayName : (userProfile.username ?? "Your buddy")
                     let notification = AppNotification(
                         id: UUID(),
                         userId: goal.creatorId,
@@ -707,7 +830,7 @@ class SupabaseService {
             // Create notification for buddy if goal has a buddy
             if let buddyId = goal.buddyId, buddyId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
-                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
+                    let updaterName = userProfile.displayName != "User" ? userProfile.displayName : (userProfile.username ?? "Your buddy")
                     let notification = AppNotification(
                         id: UUID(),
                         userId: buddyId,
@@ -726,7 +849,7 @@ class SupabaseService {
             // Also notify creator if user is the buddy
             if goal.creatorId != userId {
                 if let userProfile = try? await fetchProfile(userId: userId) {
-                    let updaterName = userProfile.name ?? userProfile.username ?? "Your buddy"
+                    let updaterName = userProfile.displayName != "User" ? userProfile.displayName : (userProfile.username ?? "Your buddy")
                     let notification = AppNotification(
                         id: UUID(),
                         userId: goal.creatorId,
@@ -1244,11 +1367,12 @@ class SupabaseService {
         do {
             // Search by name using ilike (case-insensitive pattern matching)
             // Note: Supabase Swift SDK might not support ilike directly, so we'll fetch and filter
+            // Reduced limit to 200 to prevent timeouts - this should be sufficient for most searches
             let allProfiles: [UserProfile] = try await client
                 .from("profiles")
                 .select()
                 .neq("user_id", value: currentUserId.uuidString)
-                .limit(1000) // Increased limit
+                .limit(200) // Reduced from 1000 to prevent timeouts
                 .execute()
                 .value
             
@@ -1275,39 +1399,28 @@ class SupabaseService {
             let filtered = allProfiles.filter { profile in
                 // Handle both nil and empty string cases
                 let rawUsername = profile.username
-                let rawName = profile.name
+                // Use displayName for search (UserProfile.name contains displayName from Profile)
+                let displayName = profile.displayName != "User" ? profile.displayName : ""
                 
                 // Convert to strings, handling nil and empty strings
                 let username = (rawUsername?.isEmpty == false) ? rawUsername! : ""
-                let name = (rawName?.isEmpty == false) ? rawName! : ""
+                let nameLower = displayName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 
                 // Trim and lowercase
                 let usernameLower = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                let nameLower = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                
-                // Debug: Log ALL profiles being checked (not just first 5) to find Jose
-                if usernameLower.contains("jose") || nameLower.contains("jose") || 
-                   usernameLower.contains(lowerQuery) || nameLower.contains(lowerQuery) {
-                    //print("🔍 DEBUG: 🔎 POTENTIAL MATCH - username: '\(username)' (raw: '\(rawUsername ?? "nil")'), name: '\(name)' (raw: '\(rawName ?? "nil")'), userId: \(profile.userId)")
-                }
                 
                 // Skip profiles with no username and no name
                 if usernameLower.isEmpty && nameLower.isEmpty {
                     return false
                 }
                 
-                // Match if username or name starts with query, or contains query
+                // Match if username or displayName starts with query, or contains query
                 let usernameStartsWith = !usernameLower.isEmpty && usernameLower.hasPrefix(lowerQuery)
                 let nameStartsWith = !nameLower.isEmpty && nameLower.hasPrefix(lowerQuery)
                 let usernameContains = !usernameLower.isEmpty && usernameLower.contains(lowerQuery)
                 let nameContains = !nameLower.isEmpty && nameLower.contains(lowerQuery)
                 
                 let matches = usernameStartsWith || nameStartsWith || usernameContains || nameContains
-                
-                // Debug: Log all matches
-                if matches {
-                    //print("🔍 DEBUG: ✅ MATCH FOUND - username: '\(usernameLower)', name: '\(nameLower)', userId: \(profile.userId)")
-                }
                 
                 return matches
             }
@@ -1318,13 +1431,19 @@ class SupabaseService {
             // Debug: Log all matching profiles
             for (index, profile) in filtered.enumerated() {
                 if index < 10 { // Log first 10 matches
-                    //print("🔍 DEBUG: Match \(index + 1): username='\(profile.username ?? "nil")', name='\(profile.name ?? "nil")', userId=\(profile.userId)")
+                    //print("🔍 DEBUG: Match \(index + 1): username='\(profile.username ?? "nil")', displayName='\(profile.displayName)', userId=\(profile.userId)")
                 }
             }
             
             profilesByName = filtered
             profilesByUsername = filtered // Same results for now
         } catch {
+            // Check if it's a timeout error
+            if let urlError = error as? URLError, urlError.code == .timedOut {
+                print("❌ ERROR: Search request timed out")
+                throw SupabaseError.custom("Search timed out. Please try a more specific search query or try again later.")
+            }
+            
             print("❌ ERROR: Error fetching profiles: \(error)")
             print("❌ ERROR: Error details: \(error.localizedDescription)")
             if let error = error as? DecodingError {
@@ -1347,12 +1466,12 @@ class SupabaseService {
         let lowerQuery = trimmedQuery.lowercased()
         let sorted = filtered.sorted { profile1, profile2 in
             let username1 = (profile1.username ?? "").lowercased()
-            let name1 = (profile1.name ?? "").lowercased()
+            let displayName1 = profile1.displayName != "User" ? profile1.displayName.lowercased() : ""
             let username2 = (profile2.username ?? "").lowercased()
-            let name2 = (profile2.name ?? "").lowercased()
+            let displayName2 = profile2.displayName != "User" ? profile2.displayName.lowercased() : ""
             
-            let p1StartsWith = username1.hasPrefix(lowerQuery) || name1.hasPrefix(lowerQuery)
-            let p2StartsWith = username2.hasPrefix(lowerQuery) || name2.hasPrefix(lowerQuery)
+            let p1StartsWith = username1.hasPrefix(lowerQuery) || displayName1.hasPrefix(lowerQuery)
+            let p2StartsWith = username2.hasPrefix(lowerQuery) || displayName2.hasPrefix(lowerQuery)
             
             if p1StartsWith && !p2StartsWith {
                 return true
@@ -1361,7 +1480,7 @@ class SupabaseService {
             }
             
             // If both start with or both don't, sort alphabetically
-            return (username1 + name1) < (username2 + name2)
+            return (username1 + displayName1) < (username2 + displayName2)
         }
         
         // Get existing friendships for these users
@@ -1468,7 +1587,7 @@ class SupabaseService {
         
         // Create notification for the recipient
         if let fromProfile = try? await fetchProfile(userId: fromUserId) {
-            let senderName = fromProfile.name ?? fromProfile.username ?? "Someone"
+            let senderName = fromProfile.displayName != "User" ? fromProfile.displayName : (fromProfile.username ?? "Someone")
             let notification = AppNotification(
                 id: UUID(),
                 userId: toUserId,
@@ -1522,7 +1641,7 @@ class SupabaseService {
         // The person accepting is the one who received the original request
         // So we need to notify the original sender (user_id in the friendship)
         if let accepterProfile = try? await fetchProfile(userId: response.friendId) {
-            let accepterName = accepterProfile.name ?? accepterProfile.username ?? "Someone"
+            let accepterName = accepterProfile.displayName != "User" ? accepterProfile.displayName : (accepterProfile.username ?? "Someone")
             let notification = AppNotification(
                 id: UUID(),
                 userId: response.userId, // Original sender
@@ -1566,7 +1685,7 @@ class SupabaseService {
                     id: profile.id,
                     userId: profile.userId,
                     username: profile.username,
-                    name: profile.name,
+                    name: profile.displayName != "User" ? profile.displayName : nil,
                     profileImageUrl: profile.profileImageUrl,
                     createdAt: profile.createdAt,
                     updatedAt: profile.updatedAt,
@@ -1655,7 +1774,7 @@ class SupabaseService {
                     id: profile.id,
                     userId: profile.userId,
                     username: profile.username,
-                    name: profile.name,
+                    name: profile.displayName != "User" ? profile.displayName : nil,
                     profileImageUrl: profile.profileImageUrl,
                     createdAt: profile.createdAt,
                     updatedAt: profile.updatedAt,

@@ -198,7 +198,7 @@ struct GoalsView: View {
             for userId in userIdsToLoad {
                 group.addTask {
                     if let profile = try? await supabaseService.fetchProfile(userId: userId) {
-                        let name = profile.name ?? profile.username ?? "Buddy"
+                        let name = profile.displayName != "User" ? profile.displayName : (profile.username ?? "Buddy")
                         return (userId, name)
                     }
                     return (userId, nil)

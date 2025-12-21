@@ -106,8 +106,9 @@ struct FriendRowView: View {
             
             // Friend Info
             VStack(alignment: .leading, spacing: 4) {
-                if let name = friend.name, !name.isEmpty {
-                    Text(name)
+                let displayName = friend.displayName
+                if displayName != "User" {
+                    Text(displayName)
                         .font(.headline)
                 } else {
                     Text("No name")

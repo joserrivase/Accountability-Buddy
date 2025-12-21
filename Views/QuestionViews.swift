@@ -7,6 +7,72 @@
 
 import SwiftUI
 
+// MARK: - Goal Name and Description Question View
+
+struct GoalNameAndDescriptionQuestionView: View {
+    let question: Question
+    @Binding var answer: Any?
+    @ObservedObject var flowEngine: GoalQuestionnaireFlowEngine
+    @State private var goalName: String = ""
+    @State private var goalDescription: String = ""
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Goal Name Field
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Goal Name")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                TextField(question.placeholder ?? "Enter goal name", text: $goalName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled()
+                    .onChange(of: goalName) { newValue in
+                        // Update both the answer and flowEngine
+                        flowEngine.answers.goalName = newValue.isEmpty ? nil : newValue
+                        // Store as tuple to maintain compatibility with answer binding
+                        answer = (newValue, goalDescription)
+                    }
+            }
+            
+            // Goal Description Field
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Description (Optional)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                TextEditor(text: $goalDescription)
+                    .frame(minHeight: 80)
+                    .padding(4)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled()
+                    .onChange(of: goalDescription) { newValue in
+                        // Update both the answer and flowEngine
+                        flowEngine.answers.goalDescription = newValue.isEmpty ? nil : newValue
+                        // Store as tuple to maintain compatibility with answer binding
+                        answer = (goalName, newValue)
+                    }
+            }
+        }
+        .onAppear {
+            // Load existing values if available
+            if let existingName = flowEngine.answers.goalName {
+                goalName = existingName
+            }
+            if let existingDescription = flowEngine.answers.goalDescription {
+                goalDescription = existingDescription
+            }
+            // Initialize answer binding
+            answer = (goalName, goalDescription)
+        }
+    }
+}
+
 // MARK: - Text Input Question View
 
 struct TextInputQuestionView: View {
@@ -174,7 +240,7 @@ struct BuddySelectionQuestionView: View {
                             .foregroundColor(.primary)
                         if let buddyId = selectedBuddy,
                            let buddy = friendsViewModel.friends.first(where: { $0.userId == buddyId }) {
-                            Text(buddy.name ?? buddy.username ?? "Selected")
+                            Text(buddy.displayName != "User" ? buddy.displayName : (buddy.username ?? "Selected"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         } else {
@@ -499,7 +565,7 @@ struct QuestionnaireBuddyPickerView: View {
                         }
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(friend.name ?? "No name")
+                                Text(friend.displayName != "User" ? friend.displayName : "No name")
                                     .font(.body)
                                     .foregroundColor(.primary)
                                 if let username = friend.username {

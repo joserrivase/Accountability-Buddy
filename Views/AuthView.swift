@@ -12,15 +12,20 @@ struct AuthView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var username = ""
-    @State private var fullName = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
     @State private var isSignUp = false
     @State private var showingForgotPassword = false
     @State private var forgotPasswordEmail = ""
+    @State private var usernameErrorMessage: String? = nil
+    @State private var isCheckingUsername = false
+    @State private var hasCheckedUsername = false
+    @FocusState private var isUsernameFocused: Bool
     
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                Text("Accountability Buddy")
+                Text("BuddyUp")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .padding(.bottom, 40)
@@ -40,8 +45,50 @@ struct AuthView: View {
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .focused($isUsernameFocused)
+                            .onSubmit {
+                                // When user presses return or clicks out, check username
+                                if !username.isEmpty {
+                                    Task {
+                                        await checkUsernameAvailability(username: username)
+                                    }
+                                }
+                            }
+                            .onChange(of: isUsernameFocused) { focused in
+                                // When user clicks out of the field (focus lost)
+                                if !focused && !username.isEmpty && !hasCheckedUsername {
+                                    Task {
+                                        await checkUsernameAvailability(username: username)
+                                    }
+                                }
+                            }
+                            .onChange(of: username) { newUsername in
+                                // Clear previous error and reset check status when username changes
+                                usernameErrorMessage = nil
+                                hasCheckedUsername = false
+                            }
                         
-                        TextField("Full Name", text: $fullName)
+                        if let usernameError = usernameErrorMessage {
+                            Text(usernameError)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
+                        
+                        if isCheckingUsername {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Checking username...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        TextField("First Name", text: $firstName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .textInputAutocapitalization(.words)
+                        
+                        TextField("Last Name", text: $lastName)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .textInputAutocapitalization(.words)
                     }
@@ -55,7 +102,15 @@ struct AuthView: View {
                     Button(action: {
                         Task {
                             if isSignUp {
-                                await authViewModel.signUp(email: email, password: password, username: username, fullName: fullName)
+                                // Double-check username availability before sign-up
+                                if !hasCheckedUsername && !username.isEmpty {
+                                    await checkUsernameAvailability(username: username)
+                                }
+                                
+                                // Only proceed if username is available
+                                if usernameErrorMessage == nil && hasCheckedUsername {
+                                    await authViewModel.signUp(email: email, password: password, username: username, firstName: firstName, lastName: lastName)
+                                }
                             } else {
                                 await authViewModel.signIn(email: email, password: password)
                             }
@@ -75,7 +130,7 @@ struct AuthView: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                     }
-                    .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || (isSignUp && (username.isEmpty || fullName.isEmpty)))
+                    .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || (isSignUp && (username.isEmpty || firstName.isEmpty || lastName.isEmpty || usernameErrorMessage != nil || isCheckingUsername || (!username.isEmpty && !hasCheckedUsername))))
                     
                     // Forgot Password button (only show on sign in)
                     if !isSignUp {
@@ -95,7 +150,10 @@ struct AuthView: View {
                         // Clear form fields when switching
                         if !isSignUp {
                             username = ""
-                            fullName = ""
+                            firstName = ""
+                            lastName = ""
+                            usernameErrorMessage = nil
+                            hasCheckedUsername = false
                         }
                     }) {
                         Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
@@ -114,6 +172,31 @@ struct AuthView: View {
                     isPresented: $showingForgotPassword,
                     authViewModel: authViewModel
                 )
+            }
+        }
+    }
+    
+    private func checkUsernameAvailability(username: String) async {
+        guard !username.isEmpty else {
+            usernameErrorMessage = nil
+            isCheckingUsername = false
+            hasCheckedUsername = false
+            return
+        }
+        
+        isCheckingUsername = true
+        usernameErrorMessage = nil
+        hasCheckedUsername = false
+        
+        let isAvailable = await SupabaseService.shared.checkUsernameAvailability(username: username)
+        
+        await MainActor.run {
+            isCheckingUsername = false
+            hasCheckedUsername = true
+            if !isAvailable {
+                usernameErrorMessage = "This username is already taken"
+            } else {
+                usernameErrorMessage = nil
             }
         }
     }

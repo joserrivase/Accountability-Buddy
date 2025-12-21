@@ -55,7 +55,7 @@ struct GoalReviewView: View {
                                             .foregroundColor(.gray)
                                     }
                                     
-                                    Text(buddy.name ?? buddy.username ?? "Buddy")
+                                    Text(buddy.displayName != "User" ? buddy.displayName : (buddy.username ?? "Buddy"))
                                         .font(.body)
                                 }
                             } else {

@@ -60,8 +60,8 @@ class GoalsViewModel: ObservableObject {
                 }
             }
             
-            // Sort by updated_at to maintain order
-            goalsWithProgress.sort { $0.goal.updatedAt > $1.goal.updatedAt }
+            // Sort by created_at (newest first, oldest at bottom)
+            goalsWithProgress.sort { $0.goal.createdAt > $1.goal.createdAt }
             
             goals = goalsWithProgress
         } catch {
@@ -83,6 +83,7 @@ class GoalsViewModel: ObservableObject {
         do {
             _ = try await supabaseService.createGoal(
                 name: name,
+                description: questionnaireAnswers.goalDescription,
                 trackingMethod: trackingMethod,
                 creatorId: userId,
                 buddyId: buddyId,

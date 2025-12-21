@@ -127,7 +127,14 @@ struct GoalQuestionnaireView: View {
         // Save answer based on question type
         switch question.id {
         case .goalName:
-            if let text = currentAnswer as? String {
+            // Goal name question now returns a tuple (name, description)
+            // The GoalNameAndDescriptionQuestionView already updates flowEngine.answers directly
+            // So we just need to handle the tuple for compatibility
+            if let tuple = currentAnswer as? (String, String) {
+                flowEngine.answers.goalName = tuple.0.isEmpty ? nil : tuple.0
+                flowEngine.answers.goalDescription = tuple.1.isEmpty ? nil : tuple.1
+            } else if let text = currentAnswer as? String {
+                // Fallback for old format
                 flowEngine.answers.goalName = text
             }
         case .goalType:
@@ -195,6 +202,19 @@ struct GoalQuestionnaireView: View {
         
         switch question.type {
         case .textInput, .numberInput:
+            // Special handling for goal name question which returns a tuple (name, description)
+            if question.id == .goalName {
+                if let tuple = currentAnswer as? (String, String) {
+                    // Only require the name to be non-empty, description is optional
+                    return !tuple.0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                }
+                // Fallback: check if it's a string (old format)
+                if let text = currentAnswer as? String {
+                    return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                }
+                return false
+            }
+            // Regular text input handling
             if let text = currentAnswer as? String {
                 return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
@@ -349,10 +369,19 @@ struct QuestionContentView: View {
             // Question input based on type
             switch question.type {
             case .textInput:
-                TextInputQuestionView(
-                    question: question,
-                    answer: $answer
-                )
+                // Special handling for goal name question - show both name and description
+                if question.id == .goalName {
+                    GoalNameAndDescriptionQuestionView(
+                        question: question,
+                        answer: $answer,
+                        flowEngine: flowEngine
+                    )
+                } else {
+                    TextInputQuestionView(
+                        question: question,
+                        answer: $answer
+                    )
+                }
                 
             case .multipleChoice:
                 MultipleChoiceQuestionView(

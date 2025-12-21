@@ -26,6 +26,7 @@ struct EditGoalView: View {
         // Initialize editedAnswers from the goal
         var answers = GoalQuestionnaireAnswers()
         answers.goalName = goal.name
+        answers.goalDescription = goal.description
         answers.goalType = goal.goalType
         answers.buddyId = goal.buddyId
         answers.isSolo = goal.buddyId == nil
@@ -56,6 +57,22 @@ struct EditGoalView: View {
                             get: { editedAnswers.goalName ?? "" },
                             set: { editedAnswers.goalName = $0.isEmpty ? nil : $0 }
                         ))
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Description (Optional)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        TextEditor(text: Binding(
+                            get: { editedAnswers.goalDescription ?? "" },
+                            set: { editedAnswers.goalDescription = $0.isEmpty ? nil : $0 }
+                        ))
+                        .frame(minHeight: 80)
+                        .padding(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color(.systemGray4), lineWidth: 1)
+                        )
                     }
                     
                     // Goal Type - Read Only
@@ -352,7 +369,7 @@ struct EditGoalView: View {
             let supabaseService = SupabaseService.shared
             if let buddyProfile = try? await supabaseService.fetchProfile(userId: buddyId) {
                 await MainActor.run {
-                    buddyName = buddyProfile.name ?? buddyProfile.username ?? "Buddy"
+                    buddyName = buddyProfile.displayName != "User" ? buddyProfile.displayName : (buddyProfile.username ?? "Buddy")
                 }
             } else {
                 await MainActor.run {
@@ -371,6 +388,7 @@ struct EditGoalView: View {
             try await supabaseService.updateGoal(
                 goalId: goal.id,
                 name: editedAnswers.goalName,
+                description: editedAnswers.goalDescription,
                 taskBeingTracked: editedAnswers.taskBeingTracked,
                 listItems: editedAnswers.listItems,
                 keepStreak: editedAnswers.keepStreak,
@@ -399,6 +417,7 @@ struct EditGoalView: View {
                     let updatedGoal = Goal(
                         id: goal.id,
                         name: editedAnswers.goalName ?? goal.name,
+                        description: editedAnswers.goalDescription ?? goal.description,
                         trackingMethod: goal.trackingMethod,
                         creatorId: goal.creatorId,
                         buddyId: goal.buddyId,

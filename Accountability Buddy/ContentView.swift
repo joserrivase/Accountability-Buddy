@@ -13,7 +13,17 @@ struct ContentView: View {
     
     var body: some View {
         Group {
-            if authViewModel.isAuthenticated {
+            // Show loading screen while checking auth status
+            if authViewModel.isCheckingAuth {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Loading...")
+                        .padding(.top)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if authViewModel.isAuthenticated {
                 // Use custom tab bar for iPad to avoid sidebar, standard TabView for iPhone
                 if UIDevice.current.userInterfaceIdiom == .pad {
                     // iPad: Custom layout with visible tab bar

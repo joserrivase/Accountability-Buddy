@@ -13,6 +13,7 @@ class AuthViewModel: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentUserId: UUID?
     @Published var isLoading = false
+    @Published var isCheckingAuth = true  // Track if we're still checking auth status
     @Published var errorMessage: String?
     
     private let supabaseService = SupabaseService.shared
@@ -22,6 +23,7 @@ class AuthViewModel: ObservableObject {
     }
     
     func checkAuthStatus() {
+        isCheckingAuth = true  // Set to true when starting check
         Task {
             if let userId = await supabaseService.getCurrentUser() {
                 currentUserId = userId
@@ -30,10 +32,12 @@ class AuthViewModel: ObservableObject {
                 isAuthenticated = false
                 currentUserId = nil
             }
+            isCheckingAuth = false  // Set to false when check completes
         }
     }
     
     private func checkAuthStatusAsync() async {
+        isCheckingAuth = true  // Set to true when starting check
         if let userId = await supabaseService.getCurrentUser() {
             currentUserId = userId
             isAuthenticated = true
@@ -41,14 +45,23 @@ class AuthViewModel: ObservableObject {
             isAuthenticated = false
             currentUserId = nil
         }
+        isCheckingAuth = false  // Set to false when check completes
     }
     
-    func signUp(email: String, password: String, username: String, fullName: String) async {
+    func signUp(email: String, password: String, username: String, firstName: String, lastName: String) async {
         isLoading = true
         errorMessage = nil
         
+        // First, check if username is available
+        let isAvailable = await supabaseService.checkUsernameAvailability(username: username)
+        guard isAvailable else {
+            errorMessage = "This username is already taken. Please choose a different username."
+            isLoading = false
+            return
+        }
+        
         do {
-            try await supabaseService.signUp(email: email, password: password, username: username, fullName: fullName)
+            try await supabaseService.signUp(email: email, password: password, username: username, firstName: firstName, lastName: lastName)
             // Check if user is authenticated (has session) or needs email confirmation
             await checkAuthStatusAsync()
             

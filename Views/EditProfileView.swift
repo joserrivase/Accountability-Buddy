@@ -14,12 +14,18 @@ struct EditProfileView: View {
     @ObservedObject var viewModel: ProfileViewModel
     
     @State private var username: String = ""
-    @State private var name: String = ""
+    @State private var originalUsername: String = "" // Store original username to compare
+    @State private var firstName: String = ""
+    @State private var lastName: String = ""
     @State private var selectedImage: UIImage?
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showingImagePicker = false
     @State private var showingPermissionAlert = false
     @State private var photoLibraryStatus: PHAuthorizationStatus = .notDetermined
+    @State private var usernameErrorMessage: String? = nil
+    @State private var isCheckingUsername = false
+    @State private var hasCheckedUsername = false
+    @FocusState private var isUsernameFocused: Bool
     
     var body: some View {
         NavigationView {
@@ -99,12 +105,78 @@ struct EditProfileView: View {
                 }
                 
                 Section(header: Text("Personal Information")) {
-                    TextField("Name", text: $name)
-                        .textInputAutocapitalization(.words)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Username")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        TextField("Username", text: $username)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($isUsernameFocused)
+                            .onSubmit {
+                                // When user presses return or clicks out, check username if it changed
+                                if !username.isEmpty && username != originalUsername {
+                                    Task {
+                                        await checkUsernameAvailability(username: username)
+                                    }
+                                }
+                            }
+                            .onChange(of: isUsernameFocused) { focused in
+                                // When user clicks out of the field (focus lost)
+                                if !focused && !username.isEmpty && username != originalUsername && !hasCheckedUsername {
+                                    Task {
+                                        await checkUsernameAvailability(username: username)
+                                    }
+                                }
+                            }
+                            .onChange(of: username) { newUsername in
+                                // Clear previous error and reset check status when username changes
+                                if newUsername == originalUsername {
+                                    // Username is back to original, clear error
+                                    usernameErrorMessage = nil
+                                    hasCheckedUsername = true
+                                } else {
+                                    // Username changed, need to check again
+                                    usernameErrorMessage = nil
+                                    hasCheckedUsername = false
+                                }
+                            }
+                        
+                        if let usernameError = usernameErrorMessage {
+                            Text(usernameError)
+                                .foregroundColor(.red)
+                                .font(.caption)
+                        }
+                        
+                        if isCheckingUsername {
+                            HStack {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                Text("Checking username...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
                     
-                    TextField("Username", text: $username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("First Name")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        TextField("First Name", text: $firstName)
+                            .textInputAutocapitalization(.words)
+                    }
+                    .padding(.vertical, 4)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Last Name")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        TextField("Last Name", text: $lastName)
+                            .textInputAutocapitalization(.words)
+                    }
+                    .padding(.vertical, 4)
                 }
             }
             .navigationTitle("Edit Profile")
@@ -118,15 +190,42 @@ struct EditProfileView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         Task {
-                            await saveProfile()
+                            // Double-check username availability before saving if username changed
+                            if username != originalUsername && !username.isEmpty && !hasCheckedUsername {
+                                await checkUsernameAvailability(username: username)
+                            }
+                            
+                            // Only proceed if username is available (or unchanged)
+                            if username == originalUsername || usernameErrorMessage == nil {
+                                await saveProfile()
+                            }
                         }
                     }
-                    .disabled(viewModel.isSaving)
+                    .disabled(viewModel.isSaving || 
+                             (username != originalUsername && (usernameErrorMessage != nil || isCheckingUsername || (!username.isEmpty && !hasCheckedUsername))))
                 }
             }
             .onAppear {
                 username = viewModel.profile?.username ?? ""
-                name = viewModel.profile?.name ?? ""
+                originalUsername = username // Store original username for comparison
+                // Use firstName and lastName directly from profile, fallback to splitting name if needed
+                if let profileFirstName = viewModel.profile?.firstName, !profileFirstName.isEmpty {
+                    firstName = profileFirstName
+                } else if let fullName = viewModel.profile?.name, !fullName.isEmpty {
+                    // Fallback: split existing name for backward compatibility
+                    let nameComponents = fullName.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: " ")
+                    firstName = nameComponents[0]
+                    lastName = nameComponents.count > 1 ? nameComponents.dropFirst().joined(separator: " ") : ""
+                } else {
+                    firstName = ""
+                }
+                
+                if let profileLastName = viewModel.profile?.lastName, !profileLastName.isEmpty {
+                    lastName = profileLastName
+                } else if firstName.isEmpty && lastName.isEmpty {
+                    lastName = ""
+                }
+                
                 checkPhotoLibraryPermission()
             }
             .alert("Photo Library Access Required", isPresented: $showingPermissionAlert) {
@@ -175,16 +274,50 @@ struct EditProfileView: View {
             }
         }
         
-        // Update profile
+        // Update profile with firstName and lastName directly
         await viewModel.updateProfile(
             username: username.isEmpty ? nil : username,
-            name: name.isEmpty ? nil : name,
+            firstName: firstName.isEmpty ? nil : firstName,
+            lastName: lastName.isEmpty ? nil : lastName,
             profileImageUrl: imageUrl
         )
         
         // Only dismiss if there's no error
         if viewModel.errorMessage == nil {
             dismiss()
+        }
+    }
+    
+    private func checkUsernameAvailability(username: String) async {
+        guard !username.isEmpty else {
+            usernameErrorMessage = nil
+            isCheckingUsername = false
+            hasCheckedUsername = false
+            return
+        }
+        
+        // Don't check if username is the same as original
+        if username == originalUsername {
+            usernameErrorMessage = nil
+            isCheckingUsername = false
+            hasCheckedUsername = true
+            return
+        }
+        
+        isCheckingUsername = true
+        usernameErrorMessage = nil
+        hasCheckedUsername = false
+        
+        let isAvailable = await SupabaseService.shared.checkUsernameAvailability(username: username)
+        
+        await MainActor.run {
+            isCheckingUsername = false
+            hasCheckedUsername = true
+            if !isAvailable {
+                usernameErrorMessage = "This username is already taken"
+            } else {
+                usernameErrorMessage = nil
+            }
         }
     }
 }

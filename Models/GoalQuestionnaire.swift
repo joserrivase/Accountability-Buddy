@@ -95,6 +95,7 @@ struct ValidationRule {
 struct GoalQuestionnaireAnswers {
     // Core answers
     var goalName: String?
+    var goalDescription: String? // Optional goal description
     var goalType: String? // "list_tracker", "daily_tracker", "list_created_by_user"
     var buddyId: UUID?
     var isSolo: Bool?

@@ -40,7 +40,7 @@ class ProfileViewModel: ObservableObject {
         isLoading = false
     }
     
-    func updateProfile(username: String?, name: String?, profileImageUrl: String?) async {
+    func updateProfile(username: String?, firstName: String?, lastName: String?, profileImageUrl: String?) async {
         guard let userId = userId else {
             errorMessage = "User ID not available"
             return
@@ -53,9 +53,14 @@ class ProfileViewModel: ObservableObject {
             profile = try await supabaseService.updateProfile(
                 userId: userId,
                 username: username,
-                name: name,
+                firstName: firstName,
+                lastName: lastName,
                 profileImageUrl: profileImageUrl
             )
+            // Explicitly reload profile to ensure all fields are up to date
+            // This ensures the UI reflects the latest changes immediately
+            try? await Task.sleep(nanoseconds: 100_000_000) // Small delay to ensure DB commit
+            await loadProfile()
         } catch {
             errorMessage = error.localizedDescription
         }

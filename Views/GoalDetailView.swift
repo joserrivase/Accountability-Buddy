@@ -355,6 +355,14 @@ struct GoalDetailView: View {
                 .fontWeight(.bold)
                 .id(goalWithProgress.goal.name) // Force update when name changes
             
+            // Display description if available
+            if let description = goalWithProgress.goal.description, !description.isEmpty {
+                Text(description)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .id("description-\(description)") // Force update when description changes
+            }
+            
             if goalWithProgress.goal.challengeOrFriendly == "challenge" {
                 HStack {
                     Image(systemName: "trophy.fill")
@@ -1107,7 +1115,7 @@ struct GoalDetailView: View {
         
         // Check if this is a daily tracker goal
         if goalWithProgress.goal.goalType == "daily_tracker" {
-            // Check if date is in the past (not today or future)
+            // Check if date is today or in the past (not future)
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
             guard let date = dateFormatter.date(from: dateString) else { return }
@@ -1116,8 +1124,8 @@ struct GoalDetailView: View {
             let today = calendar.startOfDay(for: Date())
             let selectedDate = calendar.startOfDay(for: date)
             
-            // If date is in the past, show confirmation popup (for both completing and uncompleting)
-            if selectedDate < today {
+            // If date is today or in the past, show confirmation popup (for both completing and uncompleting)
+            if selectedDate <= today {
                 let days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
                 let isAlreadyCompleted = days.contains(dateString)
                 
@@ -1129,7 +1137,7 @@ struct GoalDetailView: View {
                     showQuantityPopup = true
                     return
                 } else {
-                    // Show popup for past date (confirmation with optional quantity input)
+                    // Show popup for today or past date (confirmation with optional quantity input)
                     selectedDateForQuantity = dateString
                     quantityInput = ""
                     isUncompletingDate = false
@@ -1139,7 +1147,7 @@ struct GoalDetailView: View {
             }
         }
         
-        // Default behavior: toggle completion (for non-daily-tracker or today/future dates)
+        // Default behavior: toggle completion (for non-daily-tracker or future dates)
         var days = myProgress?.completedDays ?? myProgressData?.completedDays ?? []
         if let index = days.firstIndex(of: dateString) {
             days.remove(at: index)
@@ -1322,13 +1330,13 @@ struct GoalDetailView: View {
         
         // Load creator name
         if let creatorProfile = try? await supabaseService.fetchProfile(userId: goalWithProgress.goal.creatorId) {
-            creatorName = creatorProfile.name ?? creatorProfile.username ?? "Me"
+            creatorName = creatorProfile.displayName != "User" ? creatorProfile.displayName : (creatorProfile.username ?? "Me")
         }
         
         // Load buddy name if buddy exists
         if let buddyId = goalWithProgress.goal.buddyId {
             if let buddyProfile = try? await supabaseService.fetchProfile(userId: buddyId) {
-                buddyName = buddyProfile.name ?? buddyProfile.username ?? "Buddy"
+                buddyName = buddyProfile.displayName != "User" ? buddyProfile.displayName : (buddyProfile.username ?? "Buddy")
             } else {
                 buddyName = "Buddy"
             }

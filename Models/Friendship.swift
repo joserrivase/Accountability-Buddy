@@ -167,3 +167,16 @@ struct UserProfile: Identifiable, Codable {
     }
 }
 
+// Extension to get display name for UserProfile (uses name field which contains displayName, falls back to username)
+extension UserProfile {
+    var displayName: String {
+        if let name = name, !name.isEmpty {
+            return name
+        } else if let username = username, !username.isEmpty {
+            return username
+        } else {
+            return "User"
+        }
+    }
+}
+

@@ -44,6 +44,7 @@ enum TrackingMethod: String, Codable, CaseIterable {
 struct Goal: Identifiable, Codable {
     let id: UUID
     let name: String
+    let description: String? // Optional goal description
     let trackingMethod: TrackingMethod
     let creatorId: UUID
     let buddyId: UUID?
@@ -71,6 +72,7 @@ struct Goal: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case name
+        case description
         case trackingMethod = "tracking_method"
         case creatorId = "creator_id"
         case buddyId = "buddy_id"
@@ -92,9 +94,10 @@ struct Goal: Identifiable, Codable {
         case goalStatus = "goal_status"
     }
     
-    init(id: UUID, name: String, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID? = nil, createdAt: Date = Date(), updatedAt: Date = Date(), goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil, winnerUserId: UUID? = nil, loserUserId: UUID? = nil, goalStatus: GoalStatus? = nil) {
+    init(id: UUID, name: String, description: String? = nil, trackingMethod: TrackingMethod, creatorId: UUID, buddyId: UUID? = nil, createdAt: Date = Date(), updatedAt: Date = Date(), goalType: String? = nil, taskBeingTracked: String? = nil, listItems: [String]? = nil, keepStreak: Bool? = nil, trackDailyQuantity: Bool? = nil, unitTracked: String? = nil, challengeOrFriendly: String? = nil, winningCondition: String? = nil, winningNumber: Int? = nil, endDate: Date? = nil, winnersPrize: String? = nil, winnerUserId: UUID? = nil, loserUserId: UUID? = nil, goalStatus: GoalStatus? = nil) {
         self.id = id
         self.name = name
+        self.description = description
         self.trackingMethod = trackingMethod
         self.creatorId = creatorId
         self.buddyId = buddyId
@@ -120,6 +123,7 @@ struct Goal: Identifiable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
         trackingMethod = try container.decode(TrackingMethod.self, forKey: .trackingMethod)
         creatorId = try container.decode(UUID.self, forKey: .creatorId)
         buddyId = try container.decodeIfPresent(UUID.self, forKey: .buddyId)
@@ -176,6 +180,7 @@ struct Goal: Identifiable, Codable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(description, forKey: .description)
         try container.encode(trackingMethod, forKey: .trackingMethod)
         try container.encode(creatorId, forKey: .creatorId)
         try container.encodeIfPresent(buddyId, forKey: .buddyId)

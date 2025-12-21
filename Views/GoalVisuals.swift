@@ -424,34 +424,15 @@ struct CalendarWithCheckVisual: View {
                         Button(action: {
                             // Only allow action if date is not in the future
                             if !isFutureDate, let onTap = onDateTap {
-                                // Call the tap handler first - it will handle the state update
-                                // For actions that require confirmation (like past dates in daily tracker),
-                                // the handler will return early and we won't update local state
+                                // Call the tap handler - it will handle the state update
+                                // For daily tracker goals, today and past dates require confirmation,
+                                // so we don't do optimistic updates and wait for the actual state update
                                 onTap(dayString)
                                 
-                                // Only update local state optimistically if the date is today or future
-                                // (for past dates that require confirmation, we wait for actual completion)
-                                let dateFormatter = DateFormatter()
-                                dateFormatter.dateFormat = "yyyy-MM-dd"
-                                if let date = dateFormatter.date(from: dayString) {
-                                    let calendar = Calendar.current
-                                    let today = calendar.startOfDay(for: Date())
-                                    let selectedDate = calendar.startOfDay(for: date)
-                                    
-                                    // Only do optimistic update for today or future dates
-                                    // Past dates require confirmation, so we wait for the actual state update
-                                    if selectedDate >= today {
-                                        // Update local state immediately for instant visual feedback
-                                        if isMyCompleted {
-                                            localMyCompletedDays.removeAll { $0 == dayString }
-                                        } else {
-                                            if localMyCompletedDays.isEmpty {
-                                                localMyCompletedDays = myCompletedDays
-                                            }
-                                            localMyCompletedDays.append(dayString)
-                                        }
-                                    }
-                                }
+                                // Note: We no longer do optimistic updates here because:
+                                // 1. Today and past dates in daily tracker goals require confirmation popups
+                                // 2. The onChange handler will sync local state after the actual update
+                                // This prevents visual glitches where the checkmark appears then disappears
                             }
                         }) {
                             VStack(spacing: 2) {

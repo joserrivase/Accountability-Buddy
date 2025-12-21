@@ -174,8 +174,9 @@ struct SearchResultRowView: View {
             
             // User Info
             VStack(alignment: .leading, spacing: 4) {
-                if let name = user.name, !name.isEmpty {
-                    Text(name)
+                let displayName = user.displayName
+                if displayName != "User" {
+                    Text(displayName)
                         .font(.headline)
                 } else {
                     Text("No name")

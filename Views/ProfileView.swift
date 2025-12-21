@@ -18,6 +18,7 @@ struct ProfileView: View {
     @State private var userEmail: String? = nil
     @State private var goalsCount: Int = 0
     @State private var isLoadingGoalsCount = false
+    @State private var profileUpdateCounter: Int = 0
     
     var body: some View {
         NavigationView {
@@ -50,6 +51,7 @@ struct ProfileView: View {
                         .frame(width: 80, height: 80)
                         .clipShape(Circle())
                         .overlay(Circle().stroke(Color.blue, lineWidth: 2))
+                        .id("profileImage-\(imageUrlString)")
                     } else {
                         Image(systemName: "person.circle.fill")
                             .resizable()
@@ -61,10 +63,18 @@ struct ProfileView: View {
                     
                     // User Info
                     VStack(spacing: 8) {
-                        if let name = viewModel.profile?.name, !name.isEmpty {
-                            Text(name)
-                                .font(.title2)
-                                .fontWeight(.bold)
+                        if let profile = viewModel.profile {
+                            let displayName = profile.displayName
+                            if displayName != "User" {
+                                Text(displayName)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                            } else {
+                                Text("No name set")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
+                            }
                         } else {
                             Text("No name set")
                                 .font(.title2)
@@ -83,6 +93,7 @@ struct ProfileView: View {
                         }
                     }
                     .padding(.top)
+                    .id("profileInfo-\(profileUpdateCounter)")
                     
                     // Stats Row
                     HStack(spacing: 40) {
@@ -140,24 +151,25 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showingSettings = true
-                    }) {
-                        Image(systemName: "gearshape.fill")
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(content: makeToolbarContent)
             .sheet(isPresented: $showingEditProfile) {
                 EditProfileView(viewModel: viewModel)
+            }
+            .onChange(of: showingEditProfile) { isShowing in
+                // Reload profile when EditProfileView is dismissed
+                if !isShowing {
+                    Task {
+                        await viewModel.loadProfile()
+                    }
+                }
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView(authViewModel: authViewModel)
                     .environmentObject(authViewModel)
             }
             .sheet(isPresented: $showingMailComposer) {
-                let userName = viewModel.profile?.name ?? viewModel.profile?.username
+                let userName = viewModel.profile?.displayName ?? viewModel.profile?.username
                 let email = userEmail
                 
                 FeedbackFormView(
@@ -190,8 +202,27 @@ struct ProfileView: View {
                 goalsCount = goalsViewModel.goals.count
                 isLoadingGoalsCount = false
             }
+            .onChange(of: viewModel.profile) { _ in
+                // Profile was updated, increment counter to force UI refresh
+                profileUpdateCounter += 1
+            }
         }
         .navigationViewStyle(.stack) // Force stack style on iPad to avoid sidebar
+    }
+    
+    private var settingsButton: some View {
+        Button(action: {
+            showingSettings = true
+        }) {
+            Image(systemName: "gearshape.fill")
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private func makeToolbarContent() -> some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
+            settingsButton
+        }
     }
     
     private func loadGoalsCount(userId: UUID) {
