@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AuthenticationServices
 
 struct AuthView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
@@ -31,6 +32,67 @@ struct AuthView: View {
                     .padding(.bottom, 40)
                 
                 VStack(spacing: 15) {
+                    // OAuth Sign In Buttons
+                    VStack(spacing: 12) {
+                        // Apple Sign In Button
+                        SignInWithAppleButton(
+                            onRequest: { request in
+                                request.requestedScopes = [.fullName, .email]
+                            },
+                            onCompletion: { result in
+                                switch result {
+                                case .success(let authorization):
+                                    Task {
+                                        await handleAppleSignIn(authorization: authorization)
+                                    }
+                                case .failure(let error):
+                                    authViewModel.errorMessage = "Apple Sign In failed: \(error.localizedDescription)"
+                                }
+                            }
+                        )
+                        .frame(height: 60)
+                        .cornerRadius(10)
+                        .signInWithAppleButtonStyle(.black)
+                        
+                        // Google Sign In Button
+                        Button(action: {
+                            Task {
+                                await handleGoogleSignIn()
+                            }
+                        }) {
+                            HStack(spacing: 12) {
+                                // Google "G" logo with colors
+                                GoogleLogoView()
+                                Text("Sign in with Google")
+                                    .font(.system(size: 23, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(Color.white)
+                            .foregroundColor(.black)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.gray, lineWidth: 1)
+                            )
+                        }
+                    }
+                    
+                    // Separator
+                    HStack {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 1)
+                        Text("OR")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 1)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    // Email/Password Sign In
                     TextField("Email", text: $email)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .textInputAutocapitalization(.never)
@@ -176,6 +238,34 @@ struct AuthView: View {
         }
     }
     
+    private func handleAppleSignIn(authorization: ASAuthorization) async {
+        guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+            await MainActor.run {
+                authViewModel.errorMessage = "Failed to get Apple ID credential"
+            }
+            return
+        }
+        
+        guard let identityToken = appleIDCredential.identityToken,
+              let identityTokenString = String(data: identityToken, encoding: .utf8) else {
+            await MainActor.run {
+                authViewModel.errorMessage = "Failed to get identity token"
+            }
+            return
+        }
+        
+        await authViewModel.signInWithApple(
+            identityToken: identityTokenString,
+            firstName: appleIDCredential.fullName?.givenName,
+            lastName: appleIDCredential.fullName?.familyName,
+            email: appleIDCredential.email
+        )
+    }
+    
+    private func handleGoogleSignIn() async {
+        await authViewModel.signInWithGoogle()
+    }
+    
     private func checkUsernameAvailability(username: String) async {
         guard !username.isEmpty else {
             usernameErrorMessage = nil
@@ -287,5 +377,28 @@ struct ForgotPasswordView: View {
                 }
             }
         }
+    }
+}
+
+// Google Logo View using the provided image
+struct GoogleLogoView: View {
+    var body: some View {
+        Group {
+            if let uiImage = UIImage(named: "google_icon") {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else if let path = Bundle.main.path(forResource: "google_icon", ofType: "jpg"),
+                      let uiImage = UIImage(contentsOfFile: path) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                // Fallback if image not found
+                Image(systemName: "globe")
+                    .foregroundColor(.gray)
+            }
+        }
+        .frame(width: 26, height: 26)
     }
 }

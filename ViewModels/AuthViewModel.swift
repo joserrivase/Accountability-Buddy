@@ -118,4 +118,32 @@ class AuthViewModel: ObservableObject {
         
         isLoading = false
     }
+    
+    func signInWithApple(identityToken: String, firstName: String?, lastName: String?, email: String?) async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            try await supabaseService.signInWithApple(identityToken: identityToken, firstName: firstName, lastName: lastName, email: email)
+            await checkAuthStatusAsync()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+    func signInWithGoogle() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            try await supabaseService.signInWithGoogle()
+            await checkAuthStatusAsync()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
 }

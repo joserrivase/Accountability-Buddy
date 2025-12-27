@@ -7,6 +7,8 @@
 
 import Foundation
 import Supabase
+import AuthenticationServices
+import UIKit
 
 class SupabaseService {
     static let shared = SupabaseService()
@@ -30,6 +32,10 @@ class SupabaseService {
             return
         }
         
+        // Note: The deprecation warning about "Initial session emitted" can be safely ignored.
+        // This is an informational warning about future SDK behavior changes and does not affect functionality.
+        // The configuration option `emitLocalSessionAsInitialSession` may not be available in SDK version 2.37.0.
+        // If you want to suppress the warning, you may need to update to a newer SDK version that supports this configuration.
         client = SupabaseClient(supabaseURL: url, supabaseKey: supabaseKey)
         print("✅ Supabase client initialized successfully")
     }
@@ -132,6 +138,319 @@ class SupabaseService {
             return session.user.id
         } catch {
             return nil
+        }
+    }
+    
+    func signInWithApple(identityToken: String, firstName: String?, lastName: String?, email: String?) async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        do {
+            // Sign in with Apple using the identity token
+            let session = try await client.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple,
+                    idToken: identityToken
+                )
+            )
+            
+            // Check if user already has a profile
+            let userId = session.user.id
+            var existingProfile: Profile?
+            
+            do {
+                existingProfile = try await fetchProfile(userId: userId)
+            } catch {
+                // Profile doesn't exist, we'll create it
+                print("📝 Profile doesn't exist for OAuth user, will create one")
+            }
+            
+            // If profile doesn't exist, create it with OAuth user info
+            if existingProfile == nil {
+                // Generate a username from email or use a default
+                let username = email?.components(separatedBy: "@").first ?? "user\(userId.uuidString.prefix(8))"
+                
+                // Check if username is available, if not append numbers
+                var finalUsername = username
+                var counter = 1
+                while !(await checkUsernameAvailability(username: finalUsername)) {
+                    finalUsername = "\(username)\(counter)"
+                    counter += 1
+                }
+                
+                do {
+                    _ = try await createProfile(
+                        userId: userId,
+                        username: finalUsername,
+                        firstName: firstName,
+                        lastName: lastName
+                    )
+                } catch {
+                    print("⚠️ Warning: Failed to create profile for OAuth user: \(error)")
+                    // Continue anyway - user is signed in
+                }
+            } else {
+                // Profile exists - user already has an account, just signed in
+                print("✅ OAuth user already has profile, signed in successfully")
+            }
+        } catch {
+            // Check if error is due to account already existing with different provider
+            let errorDescription = error.localizedDescription.lowercased()
+            if errorDescription.contains("already registered") || errorDescription.contains("user already exists") {
+                // Try to sign in with email/password if available
+                // For now, throw a more helpful error
+                throw SupabaseError.custom("An account with this email already exists. Please sign in with your original method or use email/password.")
+            }
+            throw error
+        }
+    }
+    
+    func signInWithGoogle() async throws {
+        guard let client = client else {
+            throw SupabaseError.notInitialized
+        }
+        
+        // Get the redirect URL for OAuth callback
+        let redirectURL = URL(string: "com.joserivas.accountabilitybuddy://oauth-callback")!
+        
+        // Construct the OAuth URL manually
+        // Format: https://[project-ref].supabase.co/auth/v1/authorize?provider=google&redirect_to=[redirect]
+        let projectURL = supabaseURL
+        guard let baseURL = URL(string: projectURL) else {
+            throw SupabaseError.custom("Invalid Supabase URL")
+        }
+        
+        var components = URLComponents(url: baseURL.appendingPathComponent("auth/v1/authorize"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [
+            URLQueryItem(name: "provider", value: "google"),
+            URLQueryItem(name: "redirect_to", value: redirectURL.absoluteString)
+        ]
+        
+        guard let oauthURL = components.url else {
+            throw SupabaseError.custom("Unable to construct OAuth URL")
+        }
+        
+        // Use ASWebAuthenticationSession for OAuth flow
+        return try await withCheckedThrowingContinuation { continuation in
+            Task { @MainActor in
+                // Create presentation context provider first
+                let presentationContextProvider = WebAuthPresentationContextProvider()
+                
+                // Create the authentication session
+                let authSession = ASWebAuthenticationSession(
+                    url: oauthURL,
+                    callbackURLScheme: "com.joserivas.accountabilitybuddy"
+                ) { callbackURL, error in
+                    if let error = error {
+                        // Check error type and provide specific messages
+                        let nsError = error as NSError
+                        print("🔴 Google Sign In Error - Domain: \(nsError.domain), Code: \(nsError.code), Description: \(error.localizedDescription)")
+                        
+                        if nsError.domain == ASWebAuthenticationSessionErrorDomain {
+                            switch nsError.code {
+                            case ASWebAuthenticationSessionError.canceledLogin.rawValue:
+                                continuation.resume(throwing: SupabaseError.custom("Google sign-in was canceled"))
+                                return
+                            case ASWebAuthenticationSessionError.presentationContextNotProvided.rawValue:
+                                continuation.resume(throwing: SupabaseError.custom("Google sign-in failed: Presentation context not provided. Please ensure the app has proper window access."))
+                                return
+                            case ASWebAuthenticationSessionError.presentationContextInvalid.rawValue:
+                                continuation.resume(throwing: SupabaseError.custom("Google sign-in failed: Invalid presentation context."))
+                                return
+                            default:
+                                continuation.resume(throwing: SupabaseError.custom("Google sign-in failed: \(error.localizedDescription) (Error code: \(nsError.code))"))
+                                return
+                            }
+                        }
+                        continuation.resume(throwing: SupabaseError.custom("Google sign-in failed: \(error.localizedDescription)"))
+                        return
+                    }
+                    
+                    guard let callbackURL = callbackURL else {
+                        continuation.resume(throwing: SupabaseError.custom("No callback URL received"))
+                        return
+                    }
+                    
+                    print("🔵 Callback URL received: \(callbackURL.absoluteString)")
+                    
+                    // Handle the OAuth callback
+                    Task {
+                        do {
+                            // Check if the URL contains an access_token in the fragment (implicit flow)
+                            if let fragment = callbackURL.fragment,
+                               fragment.contains("access_token=") {
+                                // Extract access_token and refresh_token from fragment
+                                let components = fragment.components(separatedBy: "&")
+                                var accessToken: String?
+                                var refreshToken: String?
+                                
+                                for component in components {
+                                    if component.hasPrefix("access_token=") {
+                                        accessToken = String(component.dropFirst("access_token=".count))
+                                    } else if component.hasPrefix("refresh_token=") {
+                                        refreshToken = String(component.dropFirst("refresh_token=".count))
+                                    }
+                                }
+                                
+                                if let accessToken = accessToken {
+                                    // Decode URL encoding if present
+                                    let decodedAccessToken = accessToken.removingPercentEncoding ?? accessToken
+                                    let decodedRefreshToken = refreshToken?.removingPercentEncoding ?? refreshToken
+                                    
+                                    // Use the access token to set the session
+                                    // Create a Session object from the tokens
+                                    // Note: Supabase Swift SDK may use a different method signature
+                                    // If setSession doesn't work, we may need to use a different approach
+                                    let session = try await client.auth.setSession(
+                                        accessToken: decodedAccessToken,
+                                        refreshToken: decodedRefreshToken ?? ""
+                                    )
+                                    print("✅ Session established with access token")
+                                    
+                                    // Continue with profile check using the session
+                                    let userId = session.user.id
+                                    var existingProfile: Profile?
+                                    
+                                    do {
+                                        existingProfile = try await self.fetchProfile(userId: userId)
+                                    } catch {
+                                        print("📝 Profile doesn't exist for OAuth user, will create one")
+                                    }
+                                    
+                                    // If profile doesn't exist, create it with OAuth user info
+                                    if existingProfile == nil {
+                                        // Get user email from session
+                                        let email = session.user.email
+                                        
+                                        // Generate a username from email or use a default
+                                        let username = email?.components(separatedBy: "@").first ?? "user\(userId.uuidString.prefix(8))"
+                                        
+                                        // Check if username is available, if not append numbers
+                                        var finalUsername = username
+                                        var counter = 1
+                                        while !(await self.checkUsernameAvailability(username: finalUsername)) {
+                                            finalUsername = "\(username)\(counter)"
+                                            counter += 1
+                                        }
+                                        
+                                        do {
+                                            _ = try await self.createProfile(
+                                                userId: userId,
+                                                username: finalUsername,
+                                                firstName: nil,
+                                                lastName: nil
+                                            )
+                                        } catch {
+                                            print("⚠️ Warning: Failed to create profile for OAuth user: \(error)")
+                                        }
+                                    }
+                                    
+                                    continuation.resume()
+                                    return
+                                } else {
+                                    throw SupabaseError.custom("No access token found in callback URL")
+                                }
+                            } else {
+                                // Try PKCE flow - exchange the OAuth callback URL for a session
+                                try await client.auth.session(from: callbackURL)
+                            }
+                            
+                            // Wait a moment for the session to be fully established
+                            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                            
+                            // Check if session was established
+                            let supabaseSession = try await client.auth.session
+                            let userId = supabaseSession.user.id
+                            
+                            // Check if user already has a profile
+                            var existingProfile: Profile?
+                            
+                            do {
+                                existingProfile = try await self.fetchProfile(userId: userId)
+                            } catch {
+                                // Profile doesn't exist, we'll create it
+                                print("📝 Profile doesn't exist for OAuth user, will create one")
+                            }
+                            
+                            // If profile doesn't exist, create it with OAuth user info
+                            if existingProfile == nil {
+                                // Get user email from session
+                                let email = supabaseSession.user.email
+                                
+                                // Generate a username from email or use a default
+                                let username = email?.components(separatedBy: "@").first ?? "user\(userId.uuidString.prefix(8))"
+                                
+                                // Check if username is available, if not append numbers
+                                var finalUsername = username
+                                var counter = 1
+                                while !(await self.checkUsernameAvailability(username: finalUsername)) {
+                                    finalUsername = "\(username)\(counter)"
+                                    counter += 1
+                                }
+                                
+                                do {
+                                    _ = try await self.createProfile(
+                                        userId: userId,
+                                        username: finalUsername,
+                                        firstName: nil, // Google doesn't provide first/last name separately in OAuth
+                                        lastName: nil
+                                    )
+                                } catch {
+                                    print("⚠️ Warning: Failed to create profile for OAuth user: \(error)")
+                                    // Continue anyway - user is signed in
+                                }
+                            } else {
+                                // Profile exists - user already has an account, just signed in
+                                print("✅ OAuth user already has profile, signed in successfully")
+                            }
+                            
+                            continuation.resume()
+                        } catch {
+                            continuation.resume(throwing: SupabaseError.custom("Failed to establish session: \(error.localizedDescription)"))
+                        }
+                    }
+                }
+                
+                // Set presentation context provider and preferences
+                authSession.presentationContextProvider = presentationContextProvider
+                authSession.prefersEphemeralWebBrowserSession = false
+                
+                // Start the session (must be called on main thread, which we're already on)
+                if !authSession.start() {
+                    continuation.resume(throwing: SupabaseError.custom("Failed to start Google sign-in session. Please check your URL scheme configuration."))
+                    return
+                }
+            }
+        }
+    }
+    
+    // Helper class for ASWebAuthenticationSession presentation context
+    private class WebAuthPresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
+        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+            // Get the key window from all connected scenes
+            for scene in UIApplication.shared.connectedScenes {
+                if let windowScene = scene as? UIWindowScene {
+                    for window in windowScene.windows {
+                        if window.isKeyWindow {
+                            return window
+                        }
+                    }
+                    // If no key window, return the first window
+                    if let firstWindow = windowScene.windows.first {
+                        return firstWindow
+                    }
+                }
+            }
+            
+            // Fallback: try to get any window
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first {
+                return window
+            }
+            
+            // Last resort: create a temporary window (shouldn't happen)
+            fatalError("No window available for authentication")
         }
     }
     

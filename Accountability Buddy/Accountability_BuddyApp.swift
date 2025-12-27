@@ -16,6 +16,14 @@ struct AccountabilityBuddyApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(authViewModel)
+                .onOpenURL { url in
+                    // Handle OAuth callback URL
+                    // Supabase will automatically process the callback
+                    // We just need to refresh the auth status
+                    Task {
+                        await authViewModel.checkAuthStatus()
+                    }
+                }
         }
     }
 }

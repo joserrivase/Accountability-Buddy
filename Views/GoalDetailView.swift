@@ -614,24 +614,42 @@ struct GoalDetailView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else if goalWithProgress.goal.goalType == "daily_tracker" {
-                VStack(alignment: .leading, spacing: 12) {
-                    let isTodayCompleted = checkIfTodayIsCompleted()
-                    Button(isTodayCompleted ? "Today Is Completed" : "Mark Today Complete") {
-                        if !isTodayCompleted {
-                            if goalWithProgress.goal.trackDailyQuantity == true {
-                                // Show quantity popup for today
-                                selectedDateForQuantity = nil // nil means today
-                                quantityInput = ""
-                                showQuantityPopup = true
-                            } else {
-                                // Just mark today complete without quantity
+                if goalWithProgress.goal.trackDailyQuantity == true {
+                    // New UI for daily tracker with quantity tracking
+                    VStack(spacing: 16) {
+                        // Add Quantity Button
+                        Button(action: {
+                            // Show quantity popup for today
+                            selectedDateForQuantity = nil // nil means today
+                            quantityInput = ""
+                            showQuantityPopup = true
+                        }) {
+                            Text("+ Add \(goalWithProgress.goal.unitTracked ?? "units")")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity)
+                        
+                        // Today's Current Progress - centered
+                        HStack {
+                            Spacer()
+                            Text("Today's Current Progress: \(getTodayQuantity()) \(goalWithProgress.goal.unitTracked ?? "units")")
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                    }
+                } else {
+                    // Daily tracker without quantity - keep existing UI
+                    VStack(alignment: .leading, spacing: 12) {
+                        let isTodayCompleted = checkIfTodayIsCompleted()
+                        Button(isTodayCompleted ? "Today Is Completed" : "Mark Today Complete") {
+                            if !isTodayCompleted {
                                 markTodayComplete()
                             }
                         }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(isTodayCompleted)
+                        .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isTodayCompleted)
-                    .frame(maxWidth: .infinity)
                 }
             } else {
                 // Legacy input methods
@@ -736,6 +754,32 @@ struct GoalDetailView: View {
         } else {
             return goalWithProgress.goal.taskBeingTracked
         }
+    }
+    
+    private func getTodayQuantity() -> Int {
+        guard goalWithProgress.goal.trackDailyQuantity == true else {
+            return 0
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayString = dateFormatter.string(from: Date())
+        
+        // Get all list items and sum quantities for today
+        let listItems = myProgress?.listItems ?? myProgressData?.listItems ?? []
+        var todayTotal: Double = 0
+        
+        for item in listItems {
+            let itemDateString = dateFormatter.string(from: item.date)
+            if itemDateString == todayString {
+                // Try to parse quantity from title
+                if let quantity = Double(item.title) {
+                    todayTotal += quantity
+                }
+            }
+        }
+        
+        return Int(todayTotal)
     }
     
     private func getDailyQuantityEntries() -> [DailyQuantityEntry]? {
