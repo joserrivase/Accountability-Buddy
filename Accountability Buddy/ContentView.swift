@@ -91,30 +91,30 @@ struct ContentView: View {
                     }
                 } else {
                     // iPhone: Standard TabView
-                    TabView {
-                        GoalsView()
-                            .tabItem {
-                                Label("Goals", systemImage: "target")
-                            }
-                            .environmentObject(authViewModel)
-                        
-                        FriendsView()
-                            .tabItem {
-                                Label("Friends", systemImage: "person.2.fill")
-                            }
-                            .environmentObject(authViewModel)
-                        
-                        NotificationsView()
-                            .tabItem {
-                                Label("Notifications", systemImage: "bell")
-                            }
-                            .environmentObject(authViewModel)
-                        
-                        ProfileView()
-                            .tabItem {
-                                Label("Profile", systemImage: "person.fill")
-                            }
-                            .environmentObject(authViewModel)
+                TabView {
+                    GoalsView()
+                        .tabItem {
+                            Label("Goals", systemImage: "target")
+                        }
+                        .environmentObject(authViewModel)
+                    
+                    FriendsView()
+                        .tabItem {
+                            Label("Friends", systemImage: "person.2.fill")
+                        }
+                        .environmentObject(authViewModel)
+                    
+                    NotificationsView()
+                        .tabItem {
+                            Label("Notifications", systemImage: "bell")
+                        }
+                        .environmentObject(authViewModel)
+                    
+                    ProfileView()
+                        .tabItem {
+                            Label("Profile", systemImage: "person.fill")
+                        }
+                        .environmentObject(authViewModel)
                     }
                 }
             } else {

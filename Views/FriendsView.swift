@@ -6,15 +6,20 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct FriendsView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var viewModel = FriendsViewModel()
     @State private var showingAddFriend = false
+    @State private var showingShareSheet = false
+    
+    // App Store link for sharing
+    private let appStoreURL = "https://apps.apple.com/us/app/buddyup-accountability-app/id6756550977"
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
                 // Friends List
                 if viewModel.isLoading && viewModel.friends.isEmpty {
                     Spacer()
@@ -44,6 +49,38 @@ struct FriendsView: View {
                     }
                     .listStyle(PlainListStyle())
                 }
+                
+                // Invite Friends to App Card
+                VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "person.2.fill")
+                            .foregroundColor(.blue)
+                            .font(.title3)
+                        Text("Invite Friends to App")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+                    
+                    Text("Invite your friends to join you in your goals")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    Button(action: {
+                        showingShareSheet = true
+                    }) {
+                        Text("Send Invite")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                    }
+                }
+                .padding()
+                .background(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: -2)
             }
             .navigationTitle("Friends")
             .toolbar {
@@ -57,6 +94,10 @@ struct FriendsView: View {
             }
             .sheet(isPresented: $showingAddFriend) {
                 AddFriendView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                ShareSheetContainer(activityItems: [appStoreURL])
+                    .presentationDetents([.medium])
             }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") {

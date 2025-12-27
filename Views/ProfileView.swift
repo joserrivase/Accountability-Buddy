@@ -71,8 +71,8 @@ struct ProfileView: View {
                                     .fontWeight(.bold)
                             } else {
                                 Text("No name set")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                                .font(.title2)
+                                .fontWeight(.bold)
                                     .foregroundColor(.secondary)
                             }
                         } else {
@@ -103,8 +103,8 @@ struct ProfileView: View {
                                     .scaleEffect(0.8)
                             } else {
                                 Text("\(goalsCount)")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                                .font(.title2)
+                                .fontWeight(.bold)
                             }
                             Text("Goals")
                                 .font(.caption)

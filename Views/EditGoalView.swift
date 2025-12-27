@@ -73,16 +73,16 @@ struct EditGoalView: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .stroke(Color(.systemGray4), lineWidth: 1)
                         )
-                    }
-                    
+                        }
+                        
                     // Goal Type - Read Only
                     HStack {
                         Text("Goal Type")
                         Spacer()
-                        Text(getGoalTypeDisplayName())
-                            .foregroundColor(.secondary)
-                    }
-                    
+                            Text(getGoalTypeDisplayName())
+                                .foregroundColor(.secondary)
+                        }
+                        
                     // Accountability Buddy
                     HStack {
                         Text("Accountability Buddy")
@@ -151,26 +151,26 @@ struct EditGoalView: View {
                             updatedItems.append("")
                             editedAnswers.listItems = updatedItems
                         }
-                    }
-                }
-                
+                            }
+                        }
+                        
                 // Daily Tracker Options
-                if goal.goalType == "daily_tracker" {
+                        if goal.goalType == "daily_tracker" {
                     Section(header: Text("Daily Tracker Options")) {
-                        if let keepStreak = editedAnswers.keepStreak {
+                            if let keepStreak = editedAnswers.keepStreak {
                             Toggle("Keep Streak", isOn: Binding(
                                 get: { keepStreak },
                                 set: { editedAnswers.keepStreak = $0 }
                             ))
-                        }
-                        
-                        if let trackQuantity = editedAnswers.trackDailyQuantity {
+                            }
+                            
+                            if let trackQuantity = editedAnswers.trackDailyQuantity {
                             Toggle("Track Daily Quantity", isOn: Binding(
                                 get: { trackQuantity },
                                 set: { editedAnswers.trackDailyQuantity = $0 }
                             ))
-                            
-                            if trackQuantity, let unit = editedAnswers.unitTracked {
+                                
+                                if trackQuantity, let unit = editedAnswers.unitTracked {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Unit Tracked")
                                         .font(.subheadline)
@@ -180,14 +180,14 @@ struct EditGoalView: View {
                                         set: { editedAnswers.unitTracked = $0.isEmpty ? nil : $0 }
                                     ))
                                 }
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-                
+                        
                 // Challenge Settings
                 Section(header: Text("Challenge Settings")) {
-                    if let mode = editedAnswers.challengeOrFriendly {
+                        if let mode = editedAnswers.challengeOrFriendly {
                         Picker("Mode", selection: Binding(
                             get: { mode },
                             set: { editedAnswers.challengeOrFriendly = $0 }
@@ -197,7 +197,7 @@ struct EditGoalView: View {
                         }
                     }
                     
-                    if editedAnswers.isChallenge {
+                        if editedAnswers.isChallenge {
                         // Challenge Objective Dropdown
                         if let currentCondition = editedAnswers.winningCondition {
                             Picker("Challenge Objective", selection: Binding(
@@ -207,10 +207,10 @@ struct EditGoalView: View {
                                 ForEach(getWinningConditionOptions(), id: \.id) { option in
                                     Text(option.title).tag(option.id)
                                 }
+                                }
                             }
-                        }
-                        
-                        if let winningNumber = editedAnswers.winningNumber {
+                            
+                            if let winningNumber = editedAnswers.winningNumber {
                             HStack {
                                 Text("Target Number")
                                     .frame(width: 120, alignment: .leading)
@@ -220,17 +220,17 @@ struct EditGoalView: View {
                                 ), in: 1...10000) {
                                     Text("\(winningNumber)")
                                 }
+                                }
                             }
-                        }
-                        
-                        if let endDate = editedAnswers.endDate {
+                            
+                            if let endDate = editedAnswers.endDate {
                             DatePicker("End Date", selection: Binding(
                                 get: { endDate },
                                 set: { editedAnswers.endDate = $0 }
                             ), displayedComponents: .date)
-                        }
-                        
-                        if let prize = editedAnswers.winnersPrize {
+                            }
+                            
+                            if let prize = editedAnswers.winnersPrize {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Challenge Stakes")
                                     .font(.subheadline)
@@ -240,18 +240,18 @@ struct EditGoalView: View {
                                     set: { editedAnswers.winnersPrize = $0.isEmpty ? nil : $0 }
                                 ), axis: .vertical)
                                 .lineLimit(3...6)
+                                }
                             }
                         }
                     }
-                }
                 
                 // Error Message
-                if let errorMessage = errorMessage {
+                    if let errorMessage = errorMessage {
                     Section {
                         Text(errorMessage)
                             .foregroundColor(.red)
                             .font(.caption)
-                    }
+                        }
                 }
             }
             .navigationTitle("Edit Goal")
@@ -440,8 +440,8 @@ struct EditGoalView: View {
                     )
                     onSave?(updatedGoal)
                 }
-                
-                dismiss()
+            
+            dismiss()
             }
         } catch {
             errorMessage = error.localizedDescription

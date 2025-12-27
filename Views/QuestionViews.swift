@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Goal Name and Description Question View
 
@@ -192,6 +193,11 @@ struct BuddySelectionQuestionView: View {
     @State private var selectedBuddy: UUID?
     @State private var isSolo: Bool = false
     @State private var showingBuddyPicker = false
+    @State private var showingShareSheet = false
+    
+    // TODO: Replace this with your actual App Store link when available
+    // For now, use a placeholder or your website URL
+    private let appStoreURL = "https://apps.apple.com/us/app/buddyup-accountability-app/id6756550977" // Replace with your actual App Store link
     
     var body: some View {
         VStack(spacing: 16) {
@@ -267,6 +273,41 @@ struct BuddySelectionQuestionView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+            
+            Spacer()
+            
+            // Invite Friends to App Card
+            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "person.2.fill")
+                        .foregroundColor(.blue)
+                        .font(.title3)
+                    Text("Invite Friends to App")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+                
+                Text("Invite your friends to join you in your goals")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                
+                Button(action: {
+                    showingShareSheet = true
+                }) {
+                    Text("Send Invite")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         }
         .sheet(isPresented: $showingBuddyPicker) {
             QuestionnaireBuddyPickerView(
@@ -278,6 +319,10 @@ struct BuddySelectionQuestionView: View {
                     answer = (buddyId, false)
                 }
             )
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            ShareSheetContainer(activityItems: [appStoreURL])
+                .presentationDetents([.medium])
         }
         .onAppear {
             if let existingAnswer = answer as? (UUID?, Bool) {
@@ -596,6 +641,34 @@ struct QuestionnaireBuddyPickerView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        // No updates needed
+    }
+}
+
+// Container view to enable presentation detents
+struct ShareSheetContainer: View {
+    let activityItems: [Any]
+    
+    var body: some View {
+        ShareSheet(activityItems: activityItems)
+            .ignoresSafeArea()
     }
 }
 

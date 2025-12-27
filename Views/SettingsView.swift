@@ -143,7 +143,7 @@ struct SettingsView: View {
             // Explicitly dismiss the sheet - this ensures navigation happens
             // ContentView will see isAuthenticated = false and show AuthView
             await MainActor.run {
-                dismiss()
+            dismiss()
             }
         } catch {
             print("Error deleting account: \(error)")
